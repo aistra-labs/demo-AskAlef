@@ -4,13 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>AskAlef — Internal Knowledge Assistant (Demo Preview)</title>
-<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js" crossorigin="anonymous"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
 <style>
   :root {
     --alef-navy: #1E3A5F;
@@ -32,6 +32,10 @@
   .dot-bounce { animation: pulse-dot 1.2s infinite ease-in-out; }
   .cursor-blink { animation: blink 1s step-end infinite; }
   @keyframes blink { 50% { opacity: 0; } }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .docgen-spin { animation: spin 0.9s linear infinite; }
+  @keyframes fade-in-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .docgen-reveal { animation: fade-in-up 0.4s ease-out both; }
   .alef-header-accent {
     background: linear-gradient(90deg, #1E3A5F 0%, #C9504F 100%);
     height: 2px;
@@ -41,42 +45,8 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef } = React;
-
-// ============ INLINE ICONS (replacing lucide) ============
-const Icon = ({ path, size = 16, className = "", strokeWidth = 2, fill = "none" }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
-    fill={fill} stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
-    className={className}>
-    {path}
-  </svg>
-);
-const I = {
-  Send: (p) => <Icon {...p} path={<><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>} />,
-  ChevronDown: (p) => <Icon {...p} path={<polyline points="6 9 12 15 18 9"/>} />,
-  ChevronRight: (p) => <Icon {...p} path={<polyline points="9 18 15 12 9 6"/>} />,
-  FileText: (p) => <Icon {...p} path={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></>} />,
-  Lock: (p) => <Icon {...p} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} />,
-  Check: (p) => <Icon {...p} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />,
-  Alert: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />,
-  Minus: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></>} />,
-  Sparkles: (p) => <Icon {...p} path={<path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/>} />,
-  Briefcase: (p) => <Icon {...p} path={<><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></>} />,
-  Users: (p) => <Icon {...p} path={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />,
-  User: (p) => <Icon {...p} path={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />,
-  Shield: (p) => <Icon {...p} path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></>} />,
-  Clock: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />,
-  Info: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>} />,
-  X: (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />,
-  Eye: (p) => <Icon {...p} path={<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>} />,
-  Message: (p) => <Icon {...p} path={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>} />
-};
-
-const ALEF_LOGO = "data:image/jpeg;base64,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";
-
-// ============ INLINE SCENARIO DATA ============
-const DATA = {
+<script type="application/json" id="askalef-data">
+{
   "product": {
     "name": "AskAlef",
     "tagline": "Internal knowledge assistant",
@@ -130,14 +100,16 @@ const DATA = {
               "documentName": "Al Mamsha Phase 2 — Project Status Report",
               "documentType": "Project Report",
               "lastUpdated": "15 April 2026",
-              "snippet": "As of April 2026, Phase 2 structural works are tracking at 62% completion. Residential handover scheduled for Q3 2027. No material schedule slippage reported in the latest steering committee review."
+              "snippet": "As of April 2026, Phase 2 structural works are tracking at 62% completion. Residential handover scheduled for Q3 2027. No material schedule slippage reported in the latest steering committee review.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
               "documentName": "Al Mamsha — Master Development Plan v4.1",
               "documentType": "Project Brief",
               "lastUpdated": "20 November 2025",
-              "snippet": "Phase 2 comprises 1,142 residential units across a 1BR–3BR mix and 18,000 sqm of retail GLA. Total Phase 2 GFA: 215,000 sqm. Anchor tenants for retail confirmed Q3 2025."
+              "snippet": "Phase 2 comprises 1,142 residential units across a 1BR–3BR mix and 18,000 sqm of retail GLA. Total Phase 2 GFA: 215,000 sqm. Anchor tenants for retail confirmed Q3 2025.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -162,14 +134,16 @@ const DATA = {
               "documentName": "Al Mamsha Phase 2 — Project Status Report",
               "documentType": "Project Report",
               "lastUpdated": "15 April 2026",
-              "snippet": "As of April 2026, Phase 2 structural works are tracking at 62% completion. Residential handover scheduled for Q3 2027. No material schedule slippage reported in the latest steering committee review."
+              "snippet": "As of April 2026, Phase 2 structural works are tracking at 62% completion. Residential handover scheduled for Q3 2027. No material schedule slippage reported in the latest steering committee review.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
               "documentName": "Al Mamsha — Master Development Plan v4.1",
               "documentType": "Project Brief",
               "lastUpdated": "20 November 2025",
-              "snippet": "Phase 2 comprises 1,142 residential units across a 1BR–3BR mix and 18,000 sqm of retail GLA. Total Phase 2 GFA: 215,000 sqm. Anchor tenants for retail confirmed Q3 2025."
+              "snippet": "Phase 2 comprises 1,142 residential units across a 1BR–3BR mix and 18,000 sqm of retail GLA. Total Phase 2 GFA: 215,000 sqm. Anchor tenants for retail confirmed Q3 2025.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -194,14 +168,16 @@ const DATA = {
               "documentName": "Al Mamsha Phase 2 — Project Status Report",
               "documentType": "Project Report",
               "lastUpdated": "15 April 2026",
-              "snippet": "As of April 2026, Phase 2 structural works are tracking at 62% completion. Residential handover scheduled for Q3 2027. No material schedule slippage reported in the latest steering committee review."
+              "snippet": "As of April 2026, Phase 2 structural works are tracking at 62% completion. Residential handover scheduled for Q3 2027. No material schedule slippage reported in the latest steering committee review.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
               "documentName": "Al Mamsha — Master Development Plan v4.1",
               "documentType": "Project Brief",
               "lastUpdated": "20 November 2025",
-              "snippet": "Phase 2 comprises 1,142 residential units across a 1BR–3BR mix and 18,000 sqm of retail GLA. Total Phase 2 GFA: 215,000 sqm. Anchor tenants for retail confirmed Q3 2025."
+              "snippet": "Phase 2 comprises 1,142 residential units across a 1BR–3BR mix and 18,000 sqm of retail GLA. Total Phase 2 GFA: 215,000 sqm. Anchor tenants for retail confirmed Q3 2025.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -246,21 +222,24 @@ const DATA = {
               "documentName": "Hayyan — Sales Performance Dashboard Q1 2026",
               "documentType": "Sales Report",
               "lastUpdated": "5 April 2026",
-              "snippet": "Q1 2026 sales velocity: 27 units/month average. Cumulative Phase 1 sales: 412 units (74% of total inventory). Mix: 2BR 58%, 1BR 22%, 3BR 20%."
+              "snippet": "Q1 2026 sales velocity: 27 units/month average. Cumulative Phase 1 sales: 412 units (74% of total inventory). Mix: 2BR 58%, 1BR 22%, 3BR 20%.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
               "documentName": "Hayyan — Original IC Memo",
               "documentType": "IC Memo",
               "lastUpdated": "June 2024",
-              "snippet": "Underwriting assumes a sales velocity of 24 units per month across Phase 1, with a product mix of 45% 2BR, 30% 1BR, and 25% 3BR. Sensitivity tested at ±20%."
+              "snippet": "Underwriting assumes a sales velocity of 24 units per month across Phase 1, with a product mix of 45% 2BR, 30% 1BR, and 25% 3BR. Sensitivity tested at ±20%.",
+              "sourceType": "internal"
             },
             {
               "id": 3,
               "documentName": "Hayyan — Financial Performance YTD March 2026",
               "documentType": "Finance Report",
               "lastUpdated": "April 2026",
-              "snippet": "ARV tracking AED 1.42 Bn vs underwritten forecast of AED 1.31 Bn. Cash flow positive Q3 2025 onwards."
+              "snippet": "ARV tracking AED 1.42 Bn vs underwritten forecast of AED 1.31 Bn. Cash flow positive Q3 2025 onwards.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -274,6 +253,16 @@ const DATA = {
               "Role-based filter: Senior Executive — full commercial + financial detail",
               "PII screen: PASS"
             ]
+          },
+          "chart": {
+            "type": "barComparison",
+            "actualLabel": "Actual",
+            "actualValue": 27,
+            "actualSuffix": "/ mo",
+            "targetLabel": "Underwriting target",
+            "targetValue": 24,
+            "targetSuffix": "/ mo",
+            "deltaText": "+13% above target"
           }
         },
         "mid_exec": {
@@ -286,14 +275,16 @@ const DATA = {
               "documentName": "Hayyan — Sales Performance Dashboard Q1 2026",
               "documentType": "Sales Report",
               "lastUpdated": "5 April 2026",
-              "snippet": "Q1 2026 sales velocity: 27 units/month average. Cumulative Phase 1 sales: 412 units (74% of total inventory). Mix: 2BR 58%, 1BR 22%, 3BR 20%."
+              "snippet": "Q1 2026 sales velocity: 27 units/month average. Cumulative Phase 1 sales: 412 units (74% of total inventory). Mix: 2BR 58%, 1BR 22%, 3BR 20%.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
               "documentName": "Hayyan — Original IC Memo",
               "documentType": "IC Memo",
               "lastUpdated": "June 2024",
-              "snippet": "Underwriting assumes a sales velocity of 24 units per month across Phase 1, with a product mix of 45% 2BR, 30% 1BR, and 25% 3BR. Sensitivity tested at ±20%."
+              "snippet": "Underwriting assumes a sales velocity of 24 units per month across Phase 1, with a product mix of 45% 2BR, 30% 1BR, and 25% 3BR. Sensitivity tested at ±20%.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -306,6 +297,16 @@ const DATA = {
               "Role-based filter: Mid-level Executive — sales detail (financial/IRR detail withheld)",
               "PII screen: PASS"
             ]
+          },
+          "chart": {
+            "type": "barComparison",
+            "actualLabel": "Actual",
+            "actualValue": 27,
+            "actualSuffix": "/ mo",
+            "targetLabel": "Underwriting target",
+            "targetValue": 24,
+            "targetSuffix": "/ mo",
+            "deltaText": "+13% above target"
           }
         },
         "operator": {
@@ -318,7 +319,8 @@ const DATA = {
               "documentName": "Information Classification & Access Policy v2.1",
               "documentType": "Governance Policy",
               "lastUpdated": "1 January 2026",
-              "snippet": "Commercial-Confidential materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner."
+              "snippet": "Commercial-Confidential materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -365,14 +367,16 @@ const DATA = {
               "documentName": "Alef Group Capital Approval Authority Matrix v3.2",
               "documentType": "Governance Policy",
               "lastUpdated": "10 January 2026",
-              "snippet": "Tier 1 (above AED 500M): IC review at gate stage plus Board approval before capital commitment. Tier 2 (AED 100M–500M): IC approval, with quarterly Board reporting. Tier 3 (below AED 100M): Delegated authority to Project Steering Committee."
+              "snippet": "Tier 1 (above AED 500M): IC review at gate stage plus Board approval before capital commitment. Tier 2 (AED 100M–500M): IC approval, with quarterly Board reporting. Tier 3 (below AED 100M): Delegated authority to Project Steering Committee.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
               "documentName": "Investment Committee Charter 2025",
               "documentType": "Governance Policy",
               "lastUpdated": "1 January 2025",
-              "snippet": "The Investment Committee holds delegated authority for projects up to AED 500M total capex. Above this threshold, IC recommendations require ratification by the full Board of Directors."
+              "snippet": "The Investment Committee holds delegated authority for projects up to AED 500M total capex. Above this threshold, IC recommendations require ratification by the full Board of Directors.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -397,14 +401,16 @@ const DATA = {
               "documentName": "Alef Group Capital Approval Authority Matrix v3.2",
               "documentType": "Governance Policy",
               "lastUpdated": "10 January 2026",
-              "snippet": "Tier 1 (above AED 500M): IC review at gate stage plus Board approval before capital commitment. Tier 2 (AED 100M–500M): IC approval, with quarterly Board reporting. Tier 3 (below AED 100M): Delegated authority to Project Steering Committee."
+              "snippet": "Tier 1 (above AED 500M): IC review at gate stage plus Board approval before capital commitment. Tier 2 (AED 100M–500M): IC approval, with quarterly Board reporting. Tier 3 (below AED 100M): Delegated authority to Project Steering Committee.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
               "documentName": "Investment Committee Charter 2025",
               "documentType": "Governance Policy",
               "lastUpdated": "1 January 2025",
-              "snippet": "The Investment Committee holds delegated authority for projects up to AED 500M total capex. Above this threshold, IC recommendations require ratification by the full Board of Directors."
+              "snippet": "The Investment Committee holds delegated authority for projects up to AED 500M total capex. Above this threshold, IC recommendations require ratification by the full Board of Directors.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -429,14 +435,16 @@ const DATA = {
               "documentName": "Alef Group Capital Approval Authority Matrix v3.2",
               "documentType": "Governance Policy",
               "lastUpdated": "10 January 2026",
-              "snippet": "Tier 1 (above AED 500M): IC review at gate stage plus Board approval before capital commitment. Tier 2 (AED 100M–500M): IC approval, with quarterly Board reporting. Tier 3 (below AED 100M): Delegated authority to Project Steering Committee."
+              "snippet": "Tier 1 (above AED 500M): IC review at gate stage plus Board approval before capital commitment. Tier 2 (AED 100M–500M): IC approval, with quarterly Board reporting. Tier 3 (below AED 100M): Delegated authority to Project Steering Committee.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
               "documentName": "Investment Committee Charter 2025",
               "documentType": "Governance Policy",
               "lastUpdated": "1 January 2025",
-              "snippet": "The Investment Committee holds delegated authority for projects up to AED 500M total capex. Above this threshold, IC recommendations require ratification by the full Board of Directors."
+              "snippet": "The Investment Committee holds delegated authority for projects up to AED 500M total capex. Above this threshold, IC recommendations require ratification by the full Board of Directors.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -482,21 +490,24 @@ const DATA = {
               "documentName": "Sharjah Residential Market — Q4 2025 Quarterly Review",
               "documentType": "Market Memo",
               "lastUpdated": "15 February 2026",
-              "snippet": "Q4 2025: Sharjah residential price index +4.2% YoY, led by Muwaileh (+6.1%) and Al Tay (+5.4%). Mid-segment villa days-on-market: 18.7 (Q3: 14.1). Affordable segment remained resilient at 12.3 days."
+              "snippet": "Q4 2025: Sharjah residential price index +4.2% YoY, led by Muwaileh (+6.1%) and Al Tay (+5.4%). Mid-segment villa days-on-market: 18.7 (Q3: 14.1). Affordable segment remained resilient at 12.3 days.",
+              "sourceType": "external"
             },
             {
               "id": 2,
               "documentName": "Hayyan — Current Pricing Sheet",
               "documentType": "Pricing Document",
               "lastUpdated": "April 2026",
-              "snippet": "Hayyan Phase 1 weighted launch price: AED 1,420/sqft. Phase 2 indicative pricing under IC review."
+              "snippet": "Hayyan Phase 1 weighted launch price: AED 1,420/sqft. Phase 2 indicative pricing under IC review.",
+              "sourceType": "internal"
             },
             {
               "id": 3,
               "documentName": "Hayyan Phase 2 — IC Memo Q1 2026",
               "documentType": "IC Memo",
               "lastUpdated": "15 March 2026",
-              "snippet": "Base case assumes flat unit pricing through 2026, with 3% YoY escalation modeled from 2027 onwards. Sensitivity tested at ±5% pricing variance."
+              "snippet": "Base case assumes flat unit pricing through 2026, with 3% YoY escalation modeled from 2027 onwards. Sensitivity tested at ±5% pricing variance.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -510,6 +521,28 @@ const DATA = {
               "Confidence downgrade: applied (medium) — synthesis involves projection beyond direct evidence",
               "PII screen: PASS"
             ]
+          },
+          "chart": {
+            "type": "submarketComparison",
+            "yLabel": "AED / sqft (new-launch average)",
+            "bars": [
+              {
+                "label": "Al Tay",
+                "value": 1510,
+                "highlighted": false
+              },
+              {
+                "label": "Muwaileh",
+                "value": 1485,
+                "highlighted": false
+              },
+              {
+                "label": "Hayyan",
+                "value": 1420,
+                "highlighted": true
+              }
+            ],
+            "annotation": "6% gap to Al Tay"
           }
         },
         "mid_exec": {
@@ -522,14 +555,16 @@ const DATA = {
               "documentName": "Sharjah Residential Market — Q4 2025 Quarterly Review",
               "documentType": "Market Memo",
               "lastUpdated": "15 February 2026",
-              "snippet": "Q4 2025: Sharjah residential price index +4.2% YoY, led by Muwaileh (+6.1%) and Al Tay (+5.4%). Mid-segment villa days-on-market: 18.7 (Q3: 14.1). Affordable segment remained resilient at 12.3 days."
+              "snippet": "Q4 2025: Sharjah residential price index +4.2% YoY, led by Muwaileh (+6.1%) and Al Tay (+5.4%). Mid-segment villa days-on-market: 18.7 (Q3: 14.1). Affordable segment remained resilient at 12.3 days.",
+              "sourceType": "external"
             },
             {
               "id": 2,
               "documentName": "Hayyan — Current Pricing Sheet",
               "documentType": "Pricing Document",
               "lastUpdated": "April 2026",
-              "snippet": "Hayyan Phase 1 weighted launch price: AED 1,420/sqft. Phase 2 indicative pricing under IC review."
+              "snippet": "Hayyan Phase 1 weighted launch price: AED 1,420/sqft. Phase 2 indicative pricing under IC review.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -542,6 +577,28 @@ const DATA = {
               "Role-based filter: Mid-level Executive — market data without strategic recommendation",
               "PII screen: PASS"
             ]
+          },
+          "chart": {
+            "type": "submarketComparison",
+            "yLabel": "AED / sqft (new-launch average)",
+            "bars": [
+              {
+                "label": "Al Tay",
+                "value": 1510,
+                "highlighted": false
+              },
+              {
+                "label": "Muwaileh",
+                "value": 1485,
+                "highlighted": false
+              },
+              {
+                "label": "Hayyan",
+                "value": 1420,
+                "highlighted": true
+              }
+            ],
+            "annotation": "6% gap to Al Tay"
           }
         },
         "operator": {
@@ -554,7 +611,8 @@ const DATA = {
               "documentName": "Information Classification & Access Policy v2.1",
               "documentType": "Governance Policy",
               "lastUpdated": "1 January 2026",
-              "snippet": "Strategic materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner."
+              "snippet": "Strategic materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -601,7 +659,8 @@ const DATA = {
               "documentName": "Aconex Platform Renewal — Tender Document RFP-2026-014",
               "documentType": "Tender Document",
               "lastUpdated": "1 March 2026",
-              "snippet": "Section 7.2 — Payment Milestones: 30% on signing, 40% on go-live (Q3 2026 target), 30% on completion of 12-month post-implementation support. Section 7.4 — Delay Penalties: 0.5%/week per milestone, max 7.5% of milestone value. Total contract value: AED 8,400,000 over 36 months."
+              "snippet": "Section 7.2 — Payment Milestones: 30% on signing, 40% on go-live (Q3 2026 target), 30% on completion of 12-month post-implementation support. Section 7.4 — Delay Penalties: 0.5%/week per milestone, max 7.5% of milestone value. Total contract value: AED 8,400,000 over 36 months.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -613,6 +672,33 @@ const DATA = {
               "Clause-level extraction: PASS",
               "Role-based filter: Senior Executive — full commercial terms",
               "PII screen: PASS"
+            ]
+          },
+          "chart": {
+            "type": "paymentTimeline",
+            "milestones": [
+              {
+                "percent": 30,
+                "label": "Signing",
+                "date": "Q2 2026",
+                "emphasis": false
+              },
+              {
+                "percent": 40,
+                "label": "Go-live",
+                "date": "Q3 2026",
+                "emphasis": true
+              },
+              {
+                "percent": 30,
+                "label": "Support end",
+                "date": "Q3 2027",
+                "emphasis": false
+              }
+            ],
+            "betweenLabels": [
+              "+ 1 year",
+              "+ 12 months support"
             ]
           }
         },
@@ -626,7 +712,8 @@ const DATA = {
               "documentName": "Aconex Platform Renewal — Tender Document RFP-2026-014",
               "documentType": "Tender Document",
               "lastUpdated": "1 March 2026",
-              "snippet": "Section 7.2 — Payment Milestones: 30% on signing, 40% on go-live (Q3 2026 target), 30% on completion of 12-month post-implementation support. Section 7.4 — Delay Penalties: 0.5%/week per milestone, max 7.5% of milestone value. Total contract value: AED 8,400,000 over 36 months."
+              "snippet": "Section 7.2 — Payment Milestones: 30% on signing, 40% on go-live (Q3 2026 target), 30% on completion of 12-month post-implementation support. Section 7.4 — Delay Penalties: 0.5%/week per milestone, max 7.5% of milestone value. Total contract value: AED 8,400,000 over 36 months.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -638,6 +725,33 @@ const DATA = {
               "Clause-level extraction: PASS",
               "Role-based filter: Mid-level Executive — payment + penalty terms (total contract value withheld)",
               "PII screen: PASS"
+            ]
+          },
+          "chart": {
+            "type": "paymentTimeline",
+            "milestones": [
+              {
+                "percent": 30,
+                "label": "Signing",
+                "date": "Q2 2026",
+                "emphasis": false
+              },
+              {
+                "percent": 40,
+                "label": "Go-live",
+                "date": "Q3 2026",
+                "emphasis": true
+              },
+              {
+                "percent": 30,
+                "label": "Support end",
+                "date": "Q3 2027",
+                "emphasis": false
+              }
+            ],
+            "betweenLabels": [
+              "+ 1 year",
+              "+ 12 months support"
             ]
           }
         },
@@ -651,7 +765,8 @@ const DATA = {
               "documentName": "Aconex Platform Renewal — Tender Document RFP-2026-014",
               "documentType": "Tender Document",
               "lastUpdated": "1 March 2026",
-              "snippet": "Section 4.1 — Implementation Schedule: Contract signing Q2 2026, go-live target Q3 2026, post-implementation support period 12 months following go-live."
+              "snippet": "Section 4.1 — Implementation Schedule: Contract signing Q2 2026, go-live target Q3 2026, post-implementation support period 12 months following go-live.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -697,14 +812,16 @@ const DATA = {
               "documentName": "Alef Group Employment Policy v2.4",
               "documentType": "HR Policy",
               "lastUpdated": "1 February 2026",
-              "snippet": "Section 4.3 — Notice Periods: Director level and above: 90 calendar days. Manager level: 60 days. Below Manager: 30 days. Garden leave at company discretion during any notice period."
+              "snippet": "Section 4.3 — Notice Periods: Director level and above: 90 calendar days. Manager level: 60 days. Below Manager: 30 days. Garden leave at company discretion during any notice period.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
               "documentName": "Senior Management Confidentiality and Non-Compete Agreement (Template)",
               "documentType": "HR Policy",
               "lastUpdated": "1 February 2026",
-              "snippet": "Confidentiality obligations survive employment for a period of 12 months post-exit. Non-compete provisions apply for 6 months within the GCC real estate sector."
+              "snippet": "Confidentiality obligations survive employment for a period of 12 months post-exit. Non-compete provisions apply for 6 months within the GCC real estate sector.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -717,6 +834,28 @@ const DATA = {
               "Role-based personalisation: Senior Executive — Director+ tier (90 days) headlined",
               "PII screen: PASS"
             ]
+          },
+          "chart": {
+            "type": "tierLadder",
+            "tiers": [
+              {
+                "label": "Director+",
+                "value": 90,
+                "unit": "days"
+              },
+              {
+                "label": "Manager",
+                "value": 60,
+                "unit": "days"
+              },
+              {
+                "label": "Below Manager",
+                "value": 30,
+                "unit": "days"
+              }
+            ],
+            "xAxisMax": 90,
+            "highlightedIndex": 0
           }
         },
         "mid_exec": {
@@ -729,7 +868,8 @@ const DATA = {
               "documentName": "Alef Group Employment Policy v2.4",
               "documentType": "HR Policy",
               "lastUpdated": "1 February 2026",
-              "snippet": "Section 4.3 — Notice Periods: Director level and above: 90 calendar days. Manager level: 60 days. Below Manager: 30 days. Garden leave at company discretion during any notice period."
+              "snippet": "Section 4.3 — Notice Periods: Director level and above: 90 calendar days. Manager level: 60 days. Below Manager: 30 days. Garden leave at company discretion during any notice period.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -742,6 +882,28 @@ const DATA = {
               "Role-based personalisation: Mid-level Executive — Manager tier (60 days) headlined",
               "PII screen: PASS"
             ]
+          },
+          "chart": {
+            "type": "tierLadder",
+            "tiers": [
+              {
+                "label": "Director+",
+                "value": 90,
+                "unit": "days"
+              },
+              {
+                "label": "Manager",
+                "value": 60,
+                "unit": "days"
+              },
+              {
+                "label": "Below Manager",
+                "value": 30,
+                "unit": "days"
+              }
+            ],
+            "xAxisMax": 90,
+            "highlightedIndex": 1
           }
         },
         "operator": {
@@ -754,7 +916,8 @@ const DATA = {
               "documentName": "Alef Group Employment Policy v2.4",
               "documentType": "HR Policy",
               "lastUpdated": "1 February 2026",
-              "snippet": "Section 4.3 — Notice Periods: Director level and above: 90 calendar days. Manager level: 60 days. Below Manager: 30 days. Garden leave at company discretion during any notice period."
+              "snippet": "Section 4.3 — Notice Periods: Director level and above: 90 calendar days. Manager level: 60 days. Below Manager: 30 days. Garden leave at company discretion during any notice period.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -767,6 +930,28 @@ const DATA = {
               "Role-based personalisation: Operator — below-Manager tier (30 days) headlined",
               "PII screen: PASS"
             ]
+          },
+          "chart": {
+            "type": "tierLadder",
+            "tiers": [
+              {
+                "label": "Director+",
+                "value": 90,
+                "unit": "days"
+              },
+              {
+                "label": "Manager",
+                "value": 60,
+                "unit": "days"
+              },
+              {
+                "label": "Below Manager",
+                "value": 30,
+                "unit": "days"
+              }
+            ],
+            "xAxisMax": 90,
+            "highlightedIndex": 2
           }
         }
       }
@@ -798,35 +983,40 @@ const DATA = {
               "documentName": "Hayyan — Project Status Report April 2026",
               "documentType": "Project Report",
               "lastUpdated": "April 2026",
-              "snippet": "Phase 1 construction at 78% completion. MEP works on Cluster B running 6 weeks behind; mitigation plan submitted and approved by Steering Committee. Phase 2 launch contingent on IC pricing decision."
+              "snippet": "Phase 1 construction at 78% completion. MEP works on Cluster B running 6 weeks behind; mitigation plan submitted and approved by Steering Committee. Phase 2 launch contingent on IC pricing decision.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
               "documentName": "Hayyan — Sales Performance Dashboard Q1 2026",
               "documentType": "Sales Report",
               "lastUpdated": "April 2026",
-              "snippet": "Cumulative Phase 1 sales: 412 units, 74% of total inventory. Sales velocity 27 units/month, 13% above underwriting target."
+              "snippet": "Cumulative Phase 1 sales: 412 units, 74% of total inventory. Sales velocity 27 units/month, 13% above underwriting target.",
+              "sourceType": "internal"
             },
             {
               "id": 3,
               "documentName": "Hayyan — Financial Performance YTD March 2026",
               "documentType": "Finance Report",
               "lastUpdated": "April 2026",
-              "snippet": "Project IRR tracking 19.4% (underwritten 17.8%). Cash flow positive Q3 2025 onwards. ARV AED 1.42 Bn vs forecast AED 1.31 Bn."
+              "snippet": "Project IRR tracking 19.4% (underwritten 17.8%). Cash flow positive Q3 2025 onwards. ARV AED 1.42 Bn vs forecast AED 1.31 Bn.",
+              "sourceType": "internal"
             },
             {
               "id": 4,
               "documentName": "Sharjah Residential Market — Q4 2025 Quarterly Review",
               "documentType": "Market Memo",
               "lastUpdated": "February 2026",
-              "snippet": "Mid-segment villa days-on-market 18.7 (Q3: 14.1). Velocity softening signal in mid-segment, affordable segment remains resilient."
+              "snippet": "Mid-segment villa days-on-market 18.7 (Q3: 14.1). Velocity softening signal in mid-segment, affordable segment remains resilient.",
+              "sourceType": "external"
             },
             {
               "id": 5,
               "documentName": "Hayyan Phase 2 — IC Memo Q1 2026",
               "documentType": "IC Memo",
               "lastUpdated": "March 2026",
-              "snippet": "Phase 2 launch decision pending IC approval on revised pricing matrix and timing window."
+              "snippet": "Phase 2 launch decision pending IC approval on revised pricing matrix and timing window.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -840,6 +1030,42 @@ const DATA = {
               "Role-based filter: Senior Executive — board-context briefing",
               "PII screen: PASS"
             ]
+          },
+          "chart": {
+            "type": "kpiGrid",
+            "kpis": [
+              {
+                "label": "Phase 1 construction",
+                "value": "78",
+                "unit": "%",
+                "showProgress": true,
+                "progressValue": 78
+              },
+              {
+                "label": "Sales velocity",
+                "value": "27",
+                "unit": "/ mo",
+                "deltaText": "+13%",
+                "deltaTone": "coral",
+                "subtext": "UW target: 24 / mo"
+              },
+              {
+                "label": "Project IRR",
+                "value": "19.4",
+                "unit": "%",
+                "deltaText": "+160 bps",
+                "deltaTone": "green",
+                "subtext": "UW: 17.8%"
+              },
+              {
+                "label": "ARV",
+                "value": "1.42",
+                "unit": " Bn",
+                "deltaText": "+8%",
+                "deltaTone": "green",
+                "subtext": "Forecast: AED 1.31 Bn"
+              }
+            ]
           }
         },
         "mid_exec": {
@@ -852,7 +1078,8 @@ const DATA = {
               "documentName": "Information Classification & Access Policy v2.1",
               "documentType": "Governance Policy",
               "lastUpdated": "1 January 2026",
-              "snippet": "Board-context briefings materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner."
+              "snippet": "Board-context briefings materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -877,7 +1104,8 @@ const DATA = {
               "documentName": "Information Classification & Access Policy v2.1",
               "documentType": "Governance Policy",
               "lastUpdated": "1 January 2026",
-              "snippet": "Board-context briefings materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner."
+              "snippet": "Board-context briefings materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -967,6 +1195,227 @@ const DATA = {
       }
     },
     {
+      "id": "prepare_board_pack",
+      "category": "Document Generation",
+      "accessMode": "restricted",
+      "suggestedPrompt": "Prepare the Hayyan Q1 board pack for the upcoming IC review",
+      "matchKeywords": [
+        "prepare the hayyan",
+        "prepare hayyan",
+        "prepare board pack",
+        "prepare the board pack",
+        "prepare a board pack",
+        "prepare q1 board",
+        "prepare the q1 board",
+        "prepare a q1 board",
+        "prepare hayyan board",
+        "prepare the hayyan board",
+        "generate board pack",
+        "generate the board pack",
+        "generate a board pack",
+        "generate hayyan",
+        "generate q1 board",
+        "compile board pack",
+        "compile the board pack",
+        "compile a board pack",
+        "create board pack",
+        "create the board pack",
+        "create a board pack",
+        "draft board pack",
+        "draft the board pack",
+        "draft a board pack",
+        "produce board pack",
+        "produce the board pack",
+        "make board pack",
+        "make the board pack",
+        "put together board pack",
+        "put together a board pack",
+        "put together the board pack",
+        "compile q1 board",
+        "compile the q1 board",
+        "compile a q1 board",
+        "generate q1 board",
+        "generate the q1 board",
+        "generate a q1 board",
+        "create q1 board",
+        "create the q1 board",
+        "create a q1 board",
+        "draft q1 board",
+        "draft the q1 board",
+        "draft a q1 board",
+        "make q1 board",
+        "make the q1 board",
+        "make a q1 board",
+        "produce q1 board",
+        "produce the q1 board",
+        "produce a q1 board"
+      ],
+      "promptText": "Prepare the Hayyan Q1 board pack for the upcoming IC review",
+      "personasAllowed": [
+        "senior_exec"
+      ],
+      "responseByPersona": {
+        "senior_exec": {
+          "responseType": "documentGeneration",
+          "answer": "",
+          "confidence": "high",
+          "confidencePercent": 95,
+          "sources": [
+            {
+              "id": 1,
+              "documentName": "Hayyan — Project Status Report April 2026",
+              "documentType": "Project Report",
+              "lastUpdated": "15 April 2026",
+              "snippet": "Phase 1 construction 78% complete. MEP Cluster B 6 weeks behind; mitigation plan approved.",
+              "sourceType": "internal"
+            },
+            {
+              "id": 2,
+              "documentName": "Hayyan — Sales Performance Dashboard Q1 2026",
+              "documentType": "Sales Report",
+              "lastUpdated": "5 April 2026",
+              "snippet": "Q1 velocity 27/mo. Cumulative Phase 1: 412 units (74% inventory). Mix skew to 2BR at 58%.",
+              "sourceType": "internal"
+            },
+            {
+              "id": 3,
+              "documentName": "Hayyan — Financial Performance YTD March 2026",
+              "documentType": "Finance Report",
+              "lastUpdated": "April 2026",
+              "snippet": "Project IRR 19.4% vs underwritten 17.8%. ARV AED 1.42 Bn vs forecast AED 1.31 Bn. Cash flow positive since Q3 2025.",
+              "sourceType": "internal"
+            },
+            {
+              "id": 4,
+              "documentName": "Hayyan Phase 2 — IC Memo Q1 2026",
+              "documentType": "IC Memo",
+              "lastUpdated": "March 2026",
+              "snippet": "Phase 2 launch decision pending IC approval on revised pricing matrix and timing window.",
+              "sourceType": "internal"
+            },
+            {
+              "id": 5,
+              "documentName": "Hayyan — Risk Register April 2026",
+              "documentType": "Risk Register",
+              "lastUpdated": "10 April 2026",
+              "snippet": "Schedule risk on MEP Cluster B (amber). Market risk on Phase 2 pricing (amber). All other risks tracking green.",
+              "sourceType": "internal"
+            },
+            {
+              "id": 6,
+              "documentName": "Sharjah Residential Market — Q4 2025 Quarterly Review",
+              "documentType": "Market Memo",
+              "lastUpdated": "15 February 2026",
+              "snippet": "Mid-segment villa days-on-market 18.7 (Q3: 14.1). Softening signal worth monitoring for Phase 2 launch pricing.",
+              "sourceType": "external"
+            }
+          ],
+          "reasoning": {
+            "intent": "Document generation — board pack for Investment Committee",
+            "retrievedChunks": 24,
+            "topChunkScore": 0.94,
+            "validationChecks": [
+              "Source coverage: 6 documents (5 internal, 1 external) within retention window",
+              "Numeric reconciliation across project, sales, and financial sources: PASS",
+              "Brand template applied: Alef navy + coral, Tajawal typography",
+              "PII screen: PASS",
+              "Output classification: Board-Confidential (matches input source classifications)"
+            ]
+          },
+          "generationSteps": [
+            {
+              "label": "Identifying source documents",
+              "detail": "Found 6 internal documents · Hayyan Project Status Report (April 2026) · Sales Performance Dashboard Q1 2026 · Financial Performance YTD March 2026 · Hayyan Phase 2 IC Memo Q1 2026 · Risk Register · Sharjah Residential Market Q4 2025 (external)",
+              "duration": 6000
+            },
+            {
+              "label": "Extracting project status and construction metrics",
+              "detail": "Phase 1 structural progress (78%), milestone dates, MEP Cluster B schedule risk, handover timeline confirmed for Q3 2027",
+              "duration": 8000
+            },
+            {
+              "label": "Cross-referencing commercial and financial performance",
+              "detail": "Sales velocity 27/mo vs underwriting 24/mo · 412 units / 74% inventory · IRR 19.4% vs 17.8% UW · ARV 1.42 Bn vs 1.31 Bn forecast",
+              "duration": 10000
+            },
+            {
+              "label": "Synthesising executive summary",
+              "detail": "Four narrative sections drafted across construction, commercial, financial, and decisions sought from the IC",
+              "duration": 10000
+            },
+            {
+              "label": "Generating charts and visualisations",
+              "detail": "Sales velocity bar comparison · Mix breakdown vs underwriting · IRR comparison · ARV comparison · Cash flow trend · Milestone timeline",
+              "duration": 12000
+            },
+            {
+              "label": "Compiling 5-page board pack",
+              "detail": "Applying Alef brand template · Tajawal typography · navy + coral palette · 16:9 widescreen format · footer with AskAlef provenance",
+              "duration": 14000
+            }
+          ],
+          "document": {
+            "filename": "Hayyan_Q1_2026_Board_Briefing.pdf",
+            "title": "Hayyan — Q1 2026 Board Briefing",
+            "pages": 5,
+            "size": "47 KB",
+            "format": "PDF · 16:9 widescreen · Alef brand template",
+            "pdfBase64": "JVBERi0xLjQKJZOMi54gUmVwb3J0TGFiIEdlbmVyYXRlZCBQREYgZG9jdW1lbnQgKG9wZW5zb3VyY2UpCjEgMCBvYmoKPDwKL0YxIDIgMCBSIC9GMiswIDExIDAgUiAvRjMrMCAxNSAwIFIgL0Y0KzAgMTkgMCBSIC9GNSswIDIzIDAgUgo+PgplbmRvYmoKMiAwIG9iago8PAovQmFzZUZvbnQgL0hlbHZldGljYSAvRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZyAvTmFtZSAvRjEgL1N1YnR5cGUgL1R5cGUxIC9UeXBlIC9Gb250Cj4+CmVuZG9iagozIDAgb2JqCjw8Ci9Db250ZW50cyAyNyAwIFIgL01lZGlhQm94IFsgMCAwIDk2MCA1NDAgXSAvUGFyZW50IDI2IDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdCj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9Db250ZW50cyAyOCAwIFIgL01lZGlhQm94IFsgMCAwIDk2MCA1NDAgXSAvUGFyZW50IDI2IDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdCj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9Db250ZW50cyAyOSAwIFIgL01lZGlhQm94IFsgMCAwIDk2MCA1NDAgXSAvUGFyZW50IDI2IDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdCj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9Db250ZW50cyAzMCAwIFIgL01lZGlhQm94IFsgMCAwIDk2MCA1NDAgXSAvUGFyZW50IDI2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bmRzdHJlYW0KZW5kb2JqCjE4IDAgb2JqCjw8Ci9Bc2NlbnQgNjQzIC9DYXBIZWlnaHQgNjMzIC9EZXNjZW50IC0zNTcgL0ZsYWdzIDQgL0ZvbnRCQm94IFsgLTg3IC0zNzUgMTQzMiAxMDE2IF0gL0ZvbnRGaWxlMiAxNyAwIFIgCiAgL0ZvbnROYW1lIC9BQUFBQUErVGFqYXdhbC1NZWRpdW0gL0l0YWxpY0FuZ2xlIDAgL01pc3NpbmdXaWR0aCAyMzMgL1N0ZW1WIDEwOSAvVHlwZSAvRm9udERlc2NyaXB0b3IKPj4KZW5kb2JqCjE5IDAgb2JqCjw8Ci9CYXNlRm9udCAvQUFBQUFBK1RhamF3YWwtTWVkaXVtIC9GaXJzdENoYXIgMCAvRm9udERlc2NyaXB0b3IgMTggMCBSIC9MYXN0Q2hhciAxMjcgL05hbWUgL0Y0KzAgL1N1YnR5cGUgL1RydWVUeXBlIAogIC9Ub1VuaWNvZGUgMTYgMCBSIC9UeXBlIC9Gb250IC9XaWR0aHMgWyAyMzMgMTg3IDIzMyAyMzMgMjMzIDIzMyAyMzMgMjMzIDIzMyAyMzMgCiAgMjMzIDIzMyAyMzMgMjMzIDIzMyAyMzMgMjMzIDIzMyAyMzMgMjMzIAogIDIzMyAyMzMgMjMzIDIzMyAyMzMgMjMzIDIzMyAyMzMgMjMzIDIzMyAKICAyMzMgMjMzIDIzMyAyMzggMzAyIDQ5NyA1NTAgNzQ2IDU1NiAyMDQgCiAgMzY4IDM2OCAzMjggNTE4IDE5NiAyOTAgMjg2IDMyNyA1NjUgMzc1IAogIDQ4MCA0OTYgNTU1IDUwMyA1MTEgNDMyIDUyNCA1MTEgMjQ2IDE5NiAKICA1MTcgNTE4IDUxNyA0MDMgNzA0IDU3NiA1NDkgNTY4IDYyNyA1MjYgCiAgNTEzIDU5NCA2NzAgMjcyIDI1NSA1NTAgNDczIDgwMCA2NzUgNjU0IAogIDUzMiA2NTQgNTI5IDUyOSA1MzggNjQ0IDU2MSA4NTQgNTg1IDU1MSAKICA0NzggMzQ5IDMyNyAzNDkgNDI4IDQwNCAyMDAgNDk1IDU0OSA0ODEgCiAgNTQ5IDUxMiAzNTkgNTQ5IDU0NSAyNDYgMjUxIDQ1NiAyNDIgODUzIAogIDU0NSA1MzggNTQ5IDU0OSA0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IDAgb2JqCjw8Ci9Bc2NlbnQgNjQzIC9DYXBIZWlnaHQgNjMzIC9EZXNjZW50IC0zNTcgL0ZsYWdzIDQgL0ZvbnRCQm94IFsgLTkzIC0zNzUgMTQwMiA5OTUgXSAvRm9udEZpbGUyIDIxIDAgUiAKICAvRm9udE5hbWUgL0FBQUFBQStUYWphd2FsLVJlZ3VsYXIgL0l0YWxpY0FuZ2xlIDAgL01pc3NpbmdXaWR0aCAyNDAgL1N0ZW1WIDg3IC9UeXBlIC9Gb250RGVzY3JpcHRvcgo+PgplbmRvYmoKMjMgMCBvYmoKPDwKL0Jhc2VGb250IC9BQUFBQUErVGFqYXdhbC1SZWd1bGFyIC9GaXJzdENoYXIgMCAvRm9udERlc2NyaXB0b3IgMjIgMCBSIC9MYXN0Q2hhciAxMjcgL05hbWUgL0Y1KzAgL1N1YnR5cGUgL1RydWVUeXBlIAogIC9Ub1VuaWNvZGUgMjAgMCBSIC9UeXBlIC9Gb250IC9XaWR0aHMgWyAyNDAgNjIyIDE3NSAyNDAgMjQwIDI0MCAyNDAgMjQwIDI0MCAyNDAgCiAgMjQwIDI0MCAyNDAgMjQwIDI0MCAyNDAgMjQwIDI0MCAyNDAgMjQwIAogIDI0MCAyNDAgMjQwIDI0MCAyNDAgMjQwIDI0MCAyNDAgMjQwIDI0MCAKICAyNDAgMjQwIDI0MCAyMTYgMjc2IDQ5NyA1MzIgNzAwIDU2MSAxOTAgCiAgMzY4IDM2OCAzMzIgNTE4IDE5NiAyNzYgMjY0IDMyNyA1NTIgMzc1IAogIDQ4MCA0OTYgNTUzIDUxNSA1MjMgNDIzIDUzNiA1MjMgMjI0IDE4NiAKICA1MTcgNTA5IDUxNyAzODYgNjk4IDU2MSA1MzYgNTU2IDYxNSA1MjYgCiAgNTEzIDU5NCA2NDkgMjU0IDIzOCA1MTcgNDY4IDc3MiA2MzggNjQ0IAogIDUxOCA2NDQgNTIxIDUwNiA1MjYgNjMyIDU0NyA4NzIgNTY0IDUzMCAKICA0NjUgMzQ5IDMyNyAzNDkgNDA3IDM5NCAxNzcgNDg3IDUzMyA0NzEgCiAgNTMzIDQ5NSAzMzYgNTM4IDUzMyAyMzIgMjM1IDQ0NiAyMjMgODMwIAogIDUzMyA1MzMgNTM5IDUzOCAzOTIgNDE1IDM2NyA1MjIgNDQxIDY5MiAKICA0MjcgNDU3IDQxMCAzNzcgMjQyIDM3NyA0ODMgMjQwIF0KPj4KZW5kb2JqCjI0IDAgb2JqCjw8Ci9QYWdlTW9kZSAvVXNlTm9uZSAvUGFnZXMgMjYgMCBSIC9UeXBlIC9DYXRhbG9nCj4+CmVuZG9iagoyNSAwIG9iago8PAovQXV0aG9yIChBc2tBbGVmKSAvQ3JlYXRpb25EYXRlIChEOjIwMjYwNjIzMDgwNDE1KzAwJzAwJykgL0NyZWF0b3IgKGFub255bW91cykgL0tleXdvcmRzICgpIC9Nb2REYXRlIChEOjIwMjYwNjIzMDgwNDE1KzAwJzAwJykgL1Byb2R1Y2VyIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSBcKG9wZW5zb3VyY2VcKSkgCiAgL1N1YmplY3QgKFF1YXJ0ZXJseSBCb2FyZCBCcmllZmluZyBmb3IgdGhlIEludmVzdG1lbnQgQ29tbWl0dGVlKSAvVGl0bGUgKEhheXlhbiBRMSAyMDI2IEJvYXJkIEJyaWVmaW5nKSAvVHJhcHBlZCAvRmFsc2UKPj4KZW5kb2JqCjI2IDAgb2JqCjw8Ci9Db3VudCA1IC9LaWRzIFsgMyAwIFIgNCAwIFIgNSAwIFIgNiAwIFIgNyAwIFIgXSAvVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjI3IDAgb2JqCjw8Ci9GaWx0ZXIgWyAvQVNDSUk4NURlY29kZSAvRmxhdGVEZWNvZGUgXSAvTGVuZ3RoIDE1MzkKPj4Kc3RyZWFtCkdhdD0raC9EJSsmOmA7PUVBJUwsRyM4IS9sSHIxb2JaTmg5Tl0xQF0/OUNZSj5mXnEuLmsxJkhwUHUkcWcyUjBVJThibllwVzs9S09saklLTzhKdCMndThLQl4wR1g4IXA2dS08Tl1hLyVFQHVqMC0kMTBKQG1TWTE0dVhlZ19za3BaR25DMkw0TkE2ZydWXl5BTj4wPCgzMVMiZE4hOkFLaVovbj5ZRi9uYlo8TFstX3MzZDo0ZnUyb1ZbO05QZj4zWms2P1hsbTotPl8tS1UwamJyIVhHUiRAQik+S1dqVEVec2hsPmglPGtEX1YxbG8xcVFqMmtuQmAuPDohaiJLVmVnMmIkbmtpcllwQmAtbC9APE1IOzZWNm1RLjcnNzNCYUVrcm5vLHNZUjE+RUJ1TSdDJ3U/MiwrY2tuVVtJUTVMXUI7JGE8VmlEaFM6IidfWDZiX0leP2l1byU2LDlxOElTRlM0NC5YW0FoPDg3bnA3ZTlnZ2I9JF1yYUk4VzdlL28qPU1aUioxU2doP286WShycl8wRmxxKWJiS1siYVQ3RGVxJm9lTk9XR3IwcTByMWNlYmgnVWQtYy1XWkNBV3IqdDlsXixkbWVlKyU2MisrSyFOSXBtSHRrTkxbcWlqYF9wOTk9X0NYciZYTSJXJi5PXmpHbThLNClPcnI1VFdaUiUyKElDYmlfbDlKOT1PYS1BXmdAQTVESGZmNVVfTjFVI040P2tLZiw7UFdsQWVLUSVrRS8oLl47Pm06PCI3R14wISYhN0Bkc0M/cEQnTThgNTV0N01YaVloQ1Q6KyRwI0RlNldqW0EyTFQ4JG5cI1ZxcjxqNjdUaTIudWpTKXE2NyEsYi9KP2JyT2BXXSZcNUMtIj1dWT8maUxYL1t1YSkoU3RWOnVZWW1iaTw3c2dyO3BZLjNAYTZkSUQkQiYrLVtyNVU7WTglLHJBX2FVO3NVXyxQN2tKaTRUNSpgUiVBVWJbcTlNK149RSFQXTpKLEB0bUFLXnJycWFKWzdpYFU0KkJvZUtDZVtwPlokN14mZ08iMHRJNWwrSVheOiNNYHBAXlNqLiIhYkkjbjU7YitDQG5NP2VpJUYyUl42TUVXa2hMWCdqImJsNDFFMkw7JFJLPVdzUjU3V19OOCdvNEUhZlhoYCJDcS9XZU1LPl1SNDUqREYtL1cpTk8lPEhiVS1wNy9mK2UlKyFCWkw7WCM5a3FXWTloPzxlQTAzOWdFS1cvaEBAWD0tJV1Ccl5uVnE8QVU8c1RtOD0qKG1FYnRzV1wrYSlyZGwoLUtuXSdUOlwjTSZUUEdYbSVORkYiRU0rbG1ndG9WZT1uXkVwOEJwRiVoTStBOzQ1T0VKam90U3FaL0B1IlxOJXU9bS1Va05gTU5fOTQwMEJHVy05VSFVQ3RAM19YIjNVKHE5akNIOEw8aCZQW2dmXHIzRylnN3BvS0puRVhOV0lqVl8haC4hMjRaJWpFSmZTKTAxckhhcCdqUytlJnQvbWpYaSJnWWoqUDg8Oks+KFxRZWg4dEdmaDRTZydlSCQhL2R0MzA8ZVdwJFdNXGhZQ2NWPWI3RipMSl1Ib01DNEVcOERWPGc5IktXXSpKYD9SQmlbcy1qXykyRElEaTdSXEdXUUw+aVYlZztVInNFV0piQGJNPEgtQDJCdSFAMiRGIVYhcUY9UC8wVV4wXDdvYnU0QF0kajMiL3Q0ZVdTWjcqSyVtYWdgRz5HUExXcD0zPyQwJl9Fa0RXWE9YZydEalh1S2Q9cWIvWVtSXy1kW2hFYCI2ZWZNRC9vR1VKbDRoalNtOD0qKG1AOGhbR08tJkw4JGRcP2EtNUFcTGgxTXQhMWtFXztmXU9SaU4uO0BXbmNlczpqJ0tMbmIja0hNYlNDJDlaLnQvRTBwcTFQZ2RWPkRuK2FSaCE7YE1kTUkiTWcyLk1aJipFZmVvT0BCNjRJbzg7aHRlX2dGP1o5aiNHMGYmRSZtZ3BwSmktdDs7Tm8oQlZJSEwyTT9fNzstUTE3Zz9SaFFwRVg6YSEuVFZSTzh+PmVuZHN0cmVhbQplbmRvYmoKMjggMCBvYmoKPDwKL0ZpbHRlciBbIC9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZSBdIC9MZW5ndGggMjY3NQo+PgpzdHJlYW0KR2F0big+QkFRLSZxSm00LywkcTw5bWFfaStAJExlLWVpY2FIbVoqPT1cXCkncGs+U1FNYCFxPDhCUnQ0clJvL0RWTCdsNTtOYlE3SkRzbj5mUGJhQUssRlZEcWdZalIzMTdVZCp1SFtBWlREUD0maHMxY0I8cW4uX1M+TDpVcGRKbDFeNUM8QkZXYnE0R2FuUldERi5HWShVPHMtJlA/aF9zOSdMWGFnXFxYIjw6ZmA3R2o+TG5DcnRAYzpXaDExOj9SazBGK2BvcVQ6RyVtY29uKlEpXU0sTi0+VF5dZl5LQjJNLS5xISUtYDtsb2xlZDZQMEkwKFxmJCpSK003ZyE7TGREJnVEOTozXCRtSzc4c1YvOz5IYWY7UlZSJmdgdSZNMSxkJy1LWWsyK103X0ReTFpMKVAzPF1sVzAzbUVHZ0hBWzU8XCpjUFRCQzU/OUZKRjRsZCE3Y183biVGWmhcTlZDZC5AZz0vcVViR0FwMjE5Vmgoa0FYTVJIIzdwIkViWGdBRCFMRklJJlpRMUckWGFtLSsxNCFQTCQ5V1AkXzQmQmlGXjVhSiFAK11JSCEhTFgwVTcwSzMjMidUSV0iOVIyazIwRzRoV05bO1tPNUI1MlBWV15GKkpock48YFlqQ2JpQmwwdEtlOCMrOUpiR2IoXiRCIi4qV0NtNCIxaldDPS5FMV4oaG9GQlZLMlZMJkVSRCNXOFc9b1NUUytRTGlpIjlrVSxmTjZNUFVvI0xXMzlHV2cqYiIiXCFgK0UhYC1eJjg7TmBIOElgRT0uYz51RU5Lb291PTxLaC9hbl1VWCtiNUwjZSswciQyTDsvMGJBb15fIWYyWjtaWEcoK11rOjtdJFAzR0hLUT1PInRma0lKYHFgW11sMVU4M3NvazdsSCk1QF5uZUM2PF1FaGY6YGJEREJtKDomRTpzYyJJNWJBWEZBTTNxUVtmKGZDIT9tdCRMZTopUz1CX21KKixkQClIZidedC46LjFwUEdENkxnSk4tKDNnZ0xYIlFZQE5rJ047RSxKTCU/Li04TSR1U2tiVi0rMVFxSTNPdVMpJUwiWlxKVmFgTzhbOFRhXk1GV2M5RDJFMS9BdGxRUTI3c2tvTUw+J1ZwaCFRZCFqPzlaVUZdOUYxaFtqJmI2dGlWRkY0KkowaHJdM3FZQl5BSSEuTTVeXEUkalZIYToiNzJlLSNsJWk5MzdfbE1ERUNxaCdXRz9kOTYnT1ZbTkstckNpXXVVPzZuMDo6RVlWXjwuX3MzSWBXb0BGNTFFNTNAay0lOUFzMUlnbVFlLnAzXD8qdWJIa0txPzY9WVhdOCFNJVQuV3BjQkUtZCw+LSEjVVs5VVBPWVxhIltmQlYxUG1NQzZxanNmQVBWVG5TUz1GSEt1XlItPHJsMTglZidDIzFuU3IpUGkrSWFLVjkoOVc0SyZoYkpmIV8nSC86P1ZwKSpLLVhMVFxPPGVGaS87bDNQUEtQUVI4IkU5LVMrS1dZYlRPRVZec1FXZkRVZkNCQ1xVPyQ1MGVbTyJENDk5YUVfUzw+OSNlaldfKnVEXGE6JmdgVGNPT1Bna2VNKSkiYThAMmAsO1NGcHBeZz05LmUyZUNPKGImUGdDXDhOYThzTWZHL19OWHIqJygqUzspZllVZGA1Iz5uXSdvXDgmQT1xNHRCYGswbTpSVTYhVmx1V0hwZSo1YEk+MFQuRUFOQ0okMD1ZJ0tHJjFnLzU0Q2BoRUEodDZEKkpBNmFUQitRLVcwZE1ZTEVVaS9KIyY3QyYjdVsxM3U6ViVVQj4uVzlgQ11lLkoiIS4waE8laThEVDQ0TXRzUDE8QEs6Pz47S0Y+cTdsS081TEpCZydfNi9HL0s1blFCU0BiJGgwZC1vK1AmIkcnKj9EMFJzbEchOilURVhRJ28uUlovLykqPE1VMyVVZG9aJnFfViY4SyZWYkFBblNOZkVia0IoMCltY1hCNUkpTksiSUNqQXRkSS9IQGphTEIrRk4vcUIiXD9oWGNWQz44alhuXypCSCwvTjY2aEFdaCZIVFNzXkZeR3BHLmR1bkBlWEIhLFk3M1ZWZWJZJydeRkJOcUI2XTs1Qz1rPVQ5TF40ZyVjTkFDaUInaVprUXJDcEY8LzVuWSIqRy03clNzOHI1TGAnI1YvKSpmUzFgb10rLHVYL1ZnUUdIJXVUJF03M1FjNVpmPG8mXktiNnFyKVJBRydcTyEsRE0+MyhDOUs+TlBQKz0pMylicjVNc05dSG02cnRcbDo0OHE7M1JsJiEkazIyOS5WU2k+XFpTOEApISJNaHN0c1FCOCsqKldxdHRAR0Z1YmduYidyOCdISjwhSkllLzZUYCxhKUJcVkExbUVpTW0rPU9pcXJFOVRgRWpPRlh0YUMkTzcsMVQ2Sl9lYzhFbmk7PD5rQWgyaUxMNWM0KHRMMC5sYUA6Ki9CMy0qOzpNVlMqK2BdO0M5OCQxMidMNiwnV3VEPU5sZDtRJidWbGQ+JipbLVA8I1ByPT5VMSRKLC89ZDhVNz8nLVxdXjpfY3QiRSFvQDZcZEIjRlRZOjRdOzZbOGI+aG1Aakw+YGY2L0xUZW45Jls0VkNHSTNNanAuJzhtLmtcR05Hb2ItJ2lYKElbQ1MzV1ZgS21OOmYsTUcuPz0yUjIuU2RSRmA5clxlbldnXDhCRmQ3MVw0U2wxYEwwQ08wZG0/S1tVPGk2Ykx1Oz4qZE5TK2JlRk5fSTN0TCRTQChoWGhCYydPS0MmaGRLTV5pZVpHIyhtSGxuclAhITw/PDNMUkhiKUBjbDJJbVFFRkZeXkY4N2NjZG08XzkyUnEtKyVJZlExcUJEJzJgdCFiYl8/MipdOk0mWkluLDxMSEhGN0trNCteSWpiN2Y9S1hlcmkkKEknSVtZVCxETG1nIzFIPmIiYFBgbnNFYWYtXCJDZlZdXlBsIyFFbUBDUl4rQjMmZmopRVdYbSk3RWwtXCwiZiE8YzhpNDxaQmZVMDdzdUA6RVJuIV1YNSlaPyImL29gTiE+c0VzMCJyVG1BYFFRc2BPcGg3QHMkSz4iN2AzZ3E4NUswYVImTHBMMWI/TUUiJzdNUjw3Y1k7NWZpMyRmUVlcTGJ0PyhJO3IySFE3LCVrVUIxUDtiZlI7J0wiPF5mL0lILFpYYCxVZzg5K0x1cU9xbGFnMzZnXzsmP1o9PVsjRi4xL0A7b2klQFtfX0BlQDc9bVdoRnUxaF1wb1Y/aWVsMi9ub1g5VlFWMlkxXzNHQD9WZCYmaVJVP3Erb0ViMl1WOmY2KmtfdClZJDxMR24ydCVzYyw0KXJfalFHKlk9bSMrKGwhXjFYSClOSGcvTmZEa2xQMiNFWm83ZFVxNkBSPGVKZiVvXmpWallTSVlRbi4nXUJrcnRDOG9TS1pkN1NNWVVSTFFmLydHQSkpOlJtUChrUzdJN1xxMi9UVUFSRmwtPixfcFNvc2knIlY+SSRlRUMzJWBITVtpY2g4PTVEbV9JV18iITFeLjBwbjRIa19pcmlwMmZIZTZQYlxyJDE5V2FKJmQvX3JyP1ZVOkpVfj5lbmRzdHJlYW0KZW5kb2JqCjI5IDAgb2JqCjw8Ci9GaWx0ZXIgWyAvQVNDSUk4NURlY29kZSAvRmxhdGVEZWNvZGUgXSAvTGVuZ3RoIDIzNDUKPj4Kc3RyZWFtCkdhdUhMOTlcREUmXGRSNG9ZaTkiOEpwR1ljb0xLMHIubGtgbUA/OSJfUEpxSm9NRlRfN0k9WGJddFhiOk1OVUo1QnJnNWplSVdrTk5JS2pQREAiRFQnQitHUytoRzRaXk9JYik4QGxEXFRlZkRlcy8nYCY8ZDk+VW42c2skVjU7R1lrYVZpUXBLdCRYK1VZN1hiK3BTcSZYOTddKUk2K11OTyIrIzpXai4vVWJaJSFHVGlaKGwjSWYyLyNOSyMuLTcmWTFrM1JzT3BWQ1RQV0BROlRSbSM2Oi9cRC5kVWVHXXEiIVVBczQsXkdEOSRESEQySjdda0NUWiNdQnFURWxFVFRjNUxcR2xGUz9OTkhWMjUjaGxVRiRrU10hQ0Z0VFslUSNZMSFtNCkmMidGJy8oTG1MY1dOJkRmKzc4VyQ9VEVddVQhTEBQPjIyVjArRCo4WShhYF4mJWRXN1c4RFEuU141aVUkZWxVVXNjKGhfVSlJNWEoWnJfUmIncmhDUjZtcTxdQHFOOjRDSlVVSEFGJzMmRztzMS5JbGArZzFJU0UlVW8vIUxzPko4QzFoZktyUmR1O1AsQ0BwaC5CbkIhO1kmI2wpSmhCSXQqK3JkPkhqUEBqLzdtZUlAVE1GdUImWXR0JlBFRldsZUZuIlJkRy8tTjJOZDY9Xz40PkVCL0Q1UjpYXUhhcFJwYSpcNSZnLl8jJUAqZDNjVl5NNkY/NGhaK1pSWzEnaVFnQSMiciRhLjtLN0xkWkImQl9MLTcnNkgub1koU0MsJ2FzJ11ALzVMa19oYzppZz9GV0V0OkAkRU0nODdaJ0AuXz8iKSouXWgzMEpBbUBCcHEzRFxnb3JQT2QpTm8vbTZucWE3IVwrS19zLm5KSEVXYnFBWXRaM2c1PSpMYiVbb25MVyJcMlpILWFdLCMnJSlASjs9RzdINDhxPHFFJGNAOiZhUjRyZj5KUkZyLG5xJW0qO1M/WTxrbGNxMSFxJyJLYyYjNDRTIjtFJnI4ZHNkMXFSLURtXVxwSDNJUVI3b2hkLVM2J0IkdWEhRGdjciRBX2FgZmFDPDw7YiEmazpNLT5nOGQkVm9LP1RiK1VmIWRHKEw0RCknUUYrSFskRTctOU5nQEQmUW9uOUNSWVgsIVRROiJDMGhwOCtXKHBhODZBOk8+Iz9kM15sTmUhbypvVnJIJCw6RGpxKkJLTnRoXlk1QGFObClvSCwvYXFGYEopVWZNbCo6KTJDVl0xcSsxMipKJVFhb3RdOUtOPlVPcGI+RCZhQSYhZjwpKzZQXVtTSkM2UCZQXnFISV1IXD9NaiFUYmIuSUwvPzFYNWRDJFMvUVIlJXBmZTRcJCYnaFI7LStVUS1RSiUsQFdBcjJAcEBJPFssX1hrLmtyP1IlNkUmcF5STVBVZGRLWl4nVCFXXHBxVmhTdTg8OU5MVkQxVldWLG5rMDRSQFQoV1dOLUYqOT85PVtEKElII009bFJUMl9MSDxhWzg6XDJORiRzJC0mYl1aVyhKZS9yNDpAL1ZoaDQwPygmQ2JpPWBEP2JCUEY9W0RJSD40WWctdD9uNGdIJztLWkJuOTs+ZVQjXjZzLEkzUk5kO2w5OmpMSEUtTlRTOGZbTFYhaEtTXTc3bTpmTy1hXSJXZ3RvTFMjIjFVNFxHaEE2JCVjWSNaciwja2NaZ15rJD5fVl5YKG86VG9XTW9ATklTY1wkU09dNFM1YEVuQy4pKENoPDAiIi5FTEBYXG1FclI8b01wbGM3X2pRcmpFb24+UkZQYDpcWlYyJW9KXiFmUGswZEY+UjNGR0UmKl8zL2kkLmtqRlBoMmJwJlJWS3A/TDosIyZ0YmZYMF0oKWtMYlRoPTwoYCNYIkhLZmE2J1QwKXMmbi1bXyhwX2lyK1Z1MU1Vc29aW09idTo1ISl0OXFhKCc5IWckMmleYTZjNitUWWorQDQvZ1FMYz9MUXV1SEtmMSVEIV9CZTI9VU90WUdcc1lnSjNxMilVLWZSTjA/ZVlgTVAzMzIwUnQpYUhvJicyQGZ0I2h1QlpEbHBJayg4bmhtclFnVSg1RTdcYEVLYEM8XHI/WHQuYSc+SnRETTtIclAicVZmU0NjPmlNJDZsOlVSaj4mNyoySy4kSzlcKWtNWDcrV3A7dVopNzxEUUNYcnQ0VzlISUJXWiUnOm5nVyZoO1VlTW9EYyw8MWsrQiNBUFkmYlEkQ0NzMDxFZHF0JCpRSFZXZj4sR2M4MWEqQXFgU19PcilKLzNIYjhkYzdcRlg9Wz1rY2NcVHJhTEpOVC0vPFNbZiRuN3U9bVctLyZOb1FFVUo6LkkmLylgPGcwPypsM0I+M2ZGXWo5V0NwLzFJbG9GQDJCdW0oYVczRls7blBPLVNoY2BdPGw6Oi10Wj9tQ1FiLysoLVkpNStYYTpnWnFgK0FCVj9WR0sqSnA+V3NJXUw1WGpOVVddNHEyLWU0WTRcWWwlY1sjMHUjUUhCajZSZFByQ0o2VzVWS2l1ckpiT1M3XUZCXyEpb3Jkc0UxdSQoODJRNT9CNT1DYzBuMy0rYGxzY2wzbktfcDMmWSxlM0pBMyMuUihGbWNFLnNKa25PYi0xSCszKiM1IVlGKl1tbmk6NSg/aEI7LjE3JzNwZTA/XXV1SyxRM15iJDRnZTlbZ1lNYSQxUUZIRUkjP3JtYTVtMSxOPVMiX1VcPWwvcUUtY1dKa3NPPypbOXQ6MU9AZiJOMlU1TiY3Q1Uib3BWXVhJKzE7SVdYJlJKZkUyQStTZU0xZVA+VmhmbV9jcyJSUCg/c2BjViFBK1YjSHMnQUFlM3JtTltFXyQwblRCKEgtUyFJaXU3ZFhTLThuRmBTOkktaDA+VnFhLjojOUtUJThWaT0sUl80UV9TLmNsZCEmYy1XOStRUy1uak1XUG08OnFiXlNeSiNRUFcnOEY7OS1BWUA/RGJWZ11LXyRNa0ZGQ21YIys5RWk9TD1acFZtJWYwL3BodDVJJ1ZPTzpMcElESzc9aGVhcVg9V0xeYnEmWkBeLScnQlA6ZDFJNUE+MilwTk9AQyI1aGwoVG1PK29JKy5yaFRWM1Y4VHJZPUlwSkpfbT5vV3FpKFc2bFhlU2NuMzhaaX4+ZW5kc3RyZWFtCmVuZG9iagozMCAwIG9iago8PAovRmlsdGVyIFsgL0FTQ0lJODVEZWNvZGUgL0ZsYXRlRGVjb2RlIF0gL0xlbmd0aCAyMzQyCj4+CnN0cmVhbQpHYXQ9LGgvaD0/JVkqKTtKWDpLLHA7Ni9UXFReaG0wOi06SkJzNHRuXj50ITFCVCE8Z0g6WiZZczgpbE0/JzEhak8tRmw5JGVVQXVyO2hmWy1wY2RQalNyOmNKQks3T3Jncz1tQCFNayZBLVNAN15takVlSXReLGNtQHJeRWg/Z0RVNVtWQFAldVgtKGdtSy07Vi9nJmxBMypmQ3BwQWpsYHJbVCljXGssKE1xXUxvYClaUyFSJzlqNEwnPUFTUEpEMjprY11xOFlcOmlcPURtWDNsOjFsdGNsI2ZGJ20sMXM1QlledGVaXDhESmFadHBScV9ydS4iaF4/cWY7QT9ESnU2KDw5NSUwKW45XCtwM1RwQCJqOCJPbkFjTl9IRm0iQUthMl5oTiMpUShodWhCQm9jaGprOFcuSSpGQjBnMlhLYTB1XmhtOVlbazUwQy0pcjZbRmBebU1uPjM4LWlVc1dwYHNuOi08Rj1UYDpxLHIrJG4lLzVgVDZvX0ckWGJPSTZIU0gxM2hGLT03K1o1TyYxOURdKUhUS10sJC4rbihRT3JecGE0XUw8bkJQTjg2a1NZPGNII189NlJTWTNYKy9tZVY1dVRUI0BUVy8jMSFhL1MlRWhHKXRdOlQ5XTQqLmUhZWt1UktQI2t1Ni5qIVRHTlRbdVZgY3E+Q1haYHInJDlLajQoSEJCWSJvJj9TL0xQb007U2ZsZlwuIUhSQm1EPFZiIWBOUiUwbk1lTjgvN1EhUixQdHVFYF49VSlzSlFBQEM5SzhILm9CRztqPnBrQydDW05mK2Y1alUwNi0+LC9xU3BFXS5VS1NcW1EpTHElZFotMFVmZ1o8RCZbLWY2cSRjbCJqVUZKdCl0b0ZYQFxvLzE/cjNGbyNsN01ZMzU/cD1NYmhgIlZkP0cwUldxdDJObDA8WDBHPW1pKnBRQ0dPO1hPKCFuSy5DTXBoTSJDNDlVQ0lNbG0vU3MuTSNvIVgxWkwnI0AqV04mal1zS2poLihdKGxfKkQ4IWNlVy9qYFpyUikyMDAqQGYvY1NWT0cyIT1tO3VscVJvZE0+akJWVzRYZ1FfU1E2YDdaKkJtJi9KaGQ7KSZiI1koYjwjUCUoIzlgUSw0WCYvRU47OGFTPi4wP2BTXS9yVlZBZGsrbWlPUWZnMDlNKW5nUzY8XkxiK1lbVjE1OmpNUF1GRmtFZTpYOSxjWEY4byIjMC8yIUlLXUpndDVoJ1UqMzwqOkZZWlYyODA5UXBfKzdSVSpwPzU1UW5VVEpbJ0InU2FvayIyOjReRnREO2k0Yic4YiRsPjhGclVGS1tFSW10bjdyWC9OO24rJTRjNGM/cjxBSzklZyUpdDhpXyFmUyNeOEFBMz1gPlc4M09YP0BlUFtBXE0zWi1ec0ZyU1w+c3I2VnJWNEwvTkxTU1MqLF8sXyxtT05mQ1wnbTxTQzBJbTd0b0BxcnA5XzB1WERPJmMtMFdrMUUwS2VfSEZSbVpmI2Y6PGAta0xjREg2USFcOS5AQldPaEEkcjE4cVohJSpXJ0pYZlNKNHNbTDVFP3NXSy5XQ1A1azEwPk8zQk1EVCZcKWctTG83ciJHL1UhMT5lVj1gLlBuKWVBNG9hUkJhOj5iO1QqMlY+ckZmV01kWmZ1cVFLPy9OYjxWR2BaLlUlPnQ8MCdmIlwpanUiRjE4NExaTGQ6Sl4zIWsmIlEkX3Ama0pCPCJIJCstZFBOU2w4QD9KbWA+RzwlMz5VRy9JYmlZP1FAJC8/ZS5QT2lfUjhTV1wnLiY6TCxjWERibyIjMC8nX2FEbyVCPjRRQWVHT11eVHA3ISc2WzBrLVcsMWFVPktVazI3Xyw5R19iIiUlYl1qXGFrWy9pUWU0IS4oQ3BIbSRAcmE0UzpvT2JxS01CUUNrPmhhQyxaM2pHckpTSV9ObVMpQWlPTSMyOFkqdComXz1GUHBAN2JTUjwqZF9SOzg3Jy4oLE5oWy1gVFkkTmAkPF1uJl4iSWkwamY9bGJHSiJCcTIuImBnbEYjXGc2R284L1M2X1Y7QyxIPSRaVkJOMz5vN2Q2M0AmVD51V19nP3QtbGpRW2Q9UU9HPzotLHNSWT8+cTdRUUExN2BBMmNQbyxCaEhrT1s1LGVxW0pAIyNVbk1OOztQO1doVnFQNkA/YSdFVl4kR11tVmdvc0AzQFIlWiY9UGleXmg3QzZbJDM8WT1lSnJTT05sMFFKSC5TMkhOMlNuTnRKaDdrNE0rVTxmVDlbNzwiaVo2UT1HcStEQC1zImNZV2FqcVtBLVJWODRPQlVBMUFwcEVmclRqXDxPaEonViohMVI/NmwqZnAnPEVlMCUqc05EI3MhREQpXE5VN1hnVUBvPV8iTUAsVUYzWV46Nm8pJCcuVlRZaXBVRFlXLmJAJS5RMlMnV1xvI0ApIig1WzIvSWNEPlRAdHE5PzpjW3RrLk9PUldlOyZBZGslaEVicEwkb2ArSSw9c1A6LCJJOXM+cigxSm5WJ24rLzxlOGxnPSFLQFEvKG0lW0k+Jko4byFuRlAzR0dTZFNPJCFaczMtNXVlJSV0OWk0NDJVN2RoLm8tMihOQyFSYz08MSNjL2lZdEJgYStzLkIudCcuU2I6TzNKampGQnFvZj5xTUYsWlJlNzUpQjYjbkRqIWleWDBMUjpYOEhySCxJXCZGWmlPSjw6XWZHUSlyYzlyK01xWDNBaHJGLmomQT5XUW1zN3ErSiFITTBXcnVUV0FsIz1jPykzRShlYmFba0M4YyRaZkg4IlpoKSRGWmJLJlJBZj1vckNHQFo5YnByQWA5bFtSQSctOWxzT18wJ3JYPFw4YTwpc1ovbjd0Y1ojKyNjJVNlXyJFXW1yLGQkMlcrO0RRIWA3cS1AUFgzaThPdEBcaDYzKSdkVVxGWzRVXWZeaWNURlJYUzFxZUVDWGotOUpoQGtDSWdxJURFbGVJa0RmYmJQJiFfRGZGQ1dcJnVuLlkmOnNnViwrQzJTQiFqJVhbbmBnTlFbJkhYMFpzM0glRWxIWi1WXWE+ST9HNWRyPipIJk1BZ2EoSlQlaUIyaC5SQmVEKD5jJyZadGEkMVM8Ky8hbUlUUi5EJCJCYlIoRTtoOlx+PmVuZHN0cmVhbQplbmRvYmoKMzEgMCBvYmoKPDwKL0ZpbHRlciBbIC9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZSBdIC9MZW5ndGggMzM5MAo+PgpzdHJlYW0KR2F1SE4/JEckXSZxL0I4XnJyPjpbUVJqcSJAMW8zUE8xREZIO1osNVBrSlpxPUdgJyc6bS4wLlNeInEsUkRBaytTXzAoO1JuWllwKSVuYG1fOGo0a2ZMZV4wWDZCVCY+KTpZPHEibGluUFNXakBUaEslOXIxdUJGY2VvUTkqVCMlIWUyMC02WEg/dVVgNz1VZzh1XWd1N1Q8UE1gW1hqOU5PQzEway1mR0Q/ckhVOUhYMGloVlFfNCtBYW4tZGstWy1ZVFJuM28qcWctNy5TZGZIJW1jKkspRF1aKDg+LUxUVFJHb1ZMW1VoOjJYUCtdQzNzc0wlOU06bSU5Yi41YnUtKylgRzJtOURLWihmTXVAY0c/Q15zZ2Jobj9TcFIoZUVpRWVeP2wsbm1FJjJcUnRWLSZXZUtqTUVbPEhaWzI2STVwJ1EhLi88PT45WT5kKzY3MS9IaTBpXEFZKUUzVUdBOHAzakYmOlAtO1FXVXVmTkhlbCkmWitVYy9JQ2xKc3ItSVM8MDRzaSRqTFZrWCVOVnE1THRDOEdYcVAiMm00R3VRTUtKR2A9ISNla0s7YUMvMEVVYHNIc0ZKIldzNyVFPVhTOm5DIVVPKjhFcktVQCU8YDdbRlIjPk5OU2VUMihNRVFBZ2VQJGtaTUFRQ2hobFtIR250SjQkZlI0PWEjSWUvYVI8RyJ0YTxpSTInMjZaR0xpR2hTbmktRnBiOUJpakA4ajBpQS9bWCVNRTIzRWgwYSkpdWMnUk84RD8kXkhrbCVdRCsmI0BoOVEubUJsbkYpI01HUlNtbGFWNUAxKzEtM1JXRUhAV0lnPnBnI2guQTBuTFo/QSdFNVBlSjNMRFE8O2xaOUdGam1hUjFESldTQDY/Mis9bTxIZy9tblF0SVBxdXEvaGJFOEU2cjJiaGk5WColREhWN1kka1w0QG49ckRWMCR1WlwtaS9hTj8lW2JpK1YuP1xfRHRxYypBOVAlXWZRQmdRXyxLaiVZTXFkTkAsKFIiRzoicW03KVgzMlJQZipAcy02JDJVPW5OVDEjPk8uNysuQStVWT0zIkA8b3JHQzoyMlJdKkNKcTMsKVtpPUJxO0BjWi9AQSVAclNhaUcxTU07aVhWJDouZmpKLC5QKUZYMzdUUVRUSTVcbTRLJ3JtcGNWR1YnK0ZtUHI7TShLJzVLWDtTPz4rNWJYKWY0ZG1PNSZEUi1MX0ghIW9bNHBbUTU3TWBiZGwhKT5vK0FGK3RxVyJfWjtlIkJdWDhqPXFrX1RkMzZdPjE3KkgxIT9GdCQxXD90Kl0mbyMwYSFccSxhamdpNjVoWTNeRjhAREBnOmRmZ2hHIUZfWl4mUGJaKU5COUs/aVkoM147TWthVF40VEk8Y1pcY1pvOiUmRS8yZSRsb2cmTSZfdCgvbXUuT1RwPy8wNDI0XT1jWz9VKj8qVHJQTUJHQyhES0gqXzprcEElQ1xkYWInbGw5Q2ExQlpTdSEtKzE4aWJiX19gOEIiKl8jJTFlcHRfYHI0W1xHUkxtM0lfYj8icVlKSWNMcClRSCk0QWdtXnModEwrdUFnTkFPZCliJEEoJytPbmtgaSUkalUiczNZPlAjT0VjLTZaJjlTcWVCJnM3S28sMDhzMCtJUFw8IkQmZzs+T0xHMGhmMSdLXj0xQmZnKV9iPlY5Im0yUFhwbWUsKjNBU2E5Vk8vVFNOJmI/I1M+LilyMFcoKjhhcz5rOWw8LWFXUm5bbj1FODNyXEBJPEZBPl4xOURJclkyQW91Wy4wLVpPRzJxdFw0Y0Y3Sy5MYkk/WSkxRiUkQjtQUFMxZD5pTTciRjxuMGRHZjdoMWUhUkdvLCduXzRrTUA/aC1TJDtKLywhPCohRlI6TkwnU1g8V2RUPk1KLC9aOWhjNjczSzZUOSVIVWwqbl08KFEnNzVJa0xhNVdxOzAjbnJBUS5Dam51LlxLVyMoRjVCVlw/LiVJNkN0VkdYVkozcWd1bC48UmhDQEtqZWwrMnF0T0U6VF1DaSMwa2NVI1xaZDg0NFZaWz5VaFFkT0VJS0BfSmk0YVs4UlVWTVo6Z0wwQ0BqWEJxN3UmTnRrKkY+P09FTltWXSdWR1YnVWNxMGRfL3AxS2Y4cy8qc0tcV1klakNVUUZbVlI5TGkvcFZeLTkoNy1xU3JHMV1ZUEsxQypMLkgiZDtpLSheVl46UWNLVVw4YFlVbjxLSi4wZicoLzZqQDVtXVUuJUBjZnBsTXE6RVZVXipbUzllVG0/akYzS20zWzYpRzwkT04hJi9XOF9KKidndTVpLC1PRmwvWz9mbDNkUWFQTzFkcypMWyY9LzIubTlGVyMwOT9OY2Uya1VoWWQ+PyZKTGo/MzxSV1szM3JHMCQqJGMoSzReVk0yS1Y+cU9BZDdOMkRpN2NUMTlcQHJdIzpCZEhBLmFgaW5vUTRnMGNpZTNaWDUpUnNecW9UZkZtLFpGO2luO0xWSWlRXkNqRWVbUU5mSj82U0s+OFBlVURZbSpSLTR0XDBOZHRCMUVdbW1UK1E3bmxtXVFlRm5FY0A8IWZqNUozZ1lgdTktXT4uQitbO1szaVNNZyUlSmFkXVxPMWZTU3VBcUBeVzNkYyFrS3VkbEhZSmhJVSpxMVddN3RKRWVJNFxqP0BTPCpHZThQLWVeLHItaSlWL2onNE1IP0whUkREZ2UtVTYzb1oxcFlwW1VhR1BmVzpOS3FqJlo6O1ItQUAvMGFfKlc6VlxxRjRKaCo/WGdQXm9vaEcuSDVhZGU9LEY+U1NuRkcoUW09QW5ubSNzSGkqNVcwPFUmczNvNWEybV5oNSdoLzJsRkNxRiQ2YEJlXz9jKD4yJD43NEckTTIiIlpCRVgsc19JcyhgRVZMRlZnTl1cJTgmPG1tND84UTlTaWZnXypYYjgmb01LYkhmTjlrc2lDT1ZUN1lyXWQ7aWdHL2tkZD9dNE9qZmgzXlYoLEZ1RlpBUmpbUVFET3RtWGZhP2B0R1NCXjU8cFBhRWppaVYjUFVxLCdLYj5WZSZyVFhbWE5eImJWWS4+OW1OPU49Skc/PFRFREpKcVYoSkwpRE9oPi0ncFhHVUVEN2szZENWW0ZjUj5dTG1AYTVEUj8nKl4yb0c/bF02PUUwRE1IXE5bPFguTm09JjE5cXRUSjVtKnVlL2ZuI1BcbltbZEAiMFJDaWgtTVllSTRLS00yYEtLIl5EI3IjJykmIS5eJC9VIkhiPmZdKFhMSiQvYjRfTURgTUEkJXNXQi9nMyQkdSg3Yj1wUnMtPCloK111PHFsXXJ1aEokJkJNJ2teSik+RTAnayYiJkU2OERYViE4V2dmSz5fc3NXOzhkKmFNcSluWzZddD5lL0JWY1RMVnFKIzRndHMtMExqPi9qKyZYLSlITUFdc1tiZVxdP0VMPWdEWCU9WEdeKFBbLl5yNzZZR1kqamNpWiUkLS5JWkdxMyFFakBjcl5OYWxVKTsibHVrXjo2LTVDa2chMklDdT5hO0NnMmBwKGYnWSVFV24nLF00NDBXNjM1a1EyL0xLMGBscm5GclRrJywoKG1uXWBsJnElREwjY1s6OlwrW19hRWQmLTghPjkwRikpZUYnalhTRjY7KVA0JUdtTGA6RTpCTklzMW9UZUNDVyk8cVgzR1xebk9dKWAqZUNdQUQ/M2EpW29uVFMub01dcE5daTkuP2JQMW8vOkNkallKa1ZsbipbYWYrOmgsKmdHU3MlRVMlVjFtQT5US2lPVSZkXCg+KkJYbXU/YSRcMS1PRy9yVEU4MihmKy1sKyJfS2BdLllMK25sOTlSUitSTUJQWWYrQT5LUTlHSiw5bVIqP2srWThpYChARDksKSJCKz0ndSZjLyVESGtOMlFiRTs4MVNKXz5iXjxlbUJaa1JsYSdSMjlaaWApYD10YTdXYVNkM0YyKjxgImpHcTo9ZlRVazcyYV1mQVAmMTxaPFdMSVlLKCo0cCduO2UhM1Zub0tcPEI2R19QY0Q+aClXJVglLGRkTXNcNGxeUmkxVUJEcTMtRy5CUklfZVNwMzVTOj5LI00lLG4jc1ovQlQvU3VkPD5YRWY+Ni1FP3MxMkpGaDZJWy5qcHBZTSNLMkxrTXNhKl83UjE3OjU8anVgRSVEbj04K1JuJyZzalcpRHQiY3Nfaz90XCVjKyM6OXU2K0cvSlFVVGFLIShHTkooP11SWXNoQVpKcyIxPTBCInIvJTwlQk1UJD9UJjhOayI9VW9xZiJDJ0E+SVJyJF0tXjgnZGVsYlI5OydbZTNoJi0vaDJvKzlQWj9yZ3FITTZXJT5lSE4/XDlOSnBuXzIhVC0wMl0iSFdOP3BcIj5rIydUN0g1NVkob0dEO3FWRkQqJztmbCowSFVAInNhMWUkcjUiKzZxWGZyQmVnR0ltPCZpbFtmPjYsIlZXP2VnJW8kX24qYTtULC1fNm1fX1dSPnU/VmNpJyJqXiokXWRQb1JOMmU/Q2IxIlBCRmg2R1NxYDxyckg3I2ZyNH4+ZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgMzIKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDYxIDAwMDAwIG4gCjAwMDAwMDAxNDQgMDAwMDAgbiAKMDAwMDAwMDI1MSAwMDAwMCBuIAowMDAwMDAwNDQ2IDAwMDAwIG4gCjAwMDAwMDA2NDEgMDAwMDAgbiAKMDAwMDAwMDgzNiAwMDAwMCBuIAowMDAwMDAxMDMxIDAwMDAwIG4gCjAwMDAwMDEyMjYgMDAwMDAgbiAKMDAwMDAwMTk4NSAwMDAwMCBuIAowMDAwMDA4NjU2IDAwMDAwIG4gCjAwMDAwMDg4ODQgMDAwMDAgbiAKMDAwMDAwOTYxMCAwMDAwMCBuIAowMDAwMDEwMzY0IDAwMDAwIG4gCjAwMDAwMTcyODMgMDAwMDAgbiAKMDAwMDAxNzUxNyAwMDAwMCBuIAowMDAwMDE4MjQ5IDAwMDAwIG4gCjAwMDAwMTkwMDcgMDAwMDAgbiAKMDAwMDAyNTIxNiAwMDAwMCBuIAowMDAwMDI1NDQxIDAwMDAwIG4gCjAwMDAwMjYxNzAgMDAwMDAgbiAKMDAwMDAyNjkzMyAwMDAwMCBuIAowMDAwMDMzMjk4IDAwMDAwIG4gCjAwMDAwMzM1MjIgMDAwMDAgbiAKMDAwMDAzNDI1MiAwMDAwMCBuIAowMDAwMDM0MzIyIDAwMDAwIG4gCjAwMDAwMzQ2NDUgMDAwMDAgbiAKMDAwMDAzNDcyOSAwMDAwMCBuIAowMDAwMDM2MzYwIDAwMDAwIG4gCjAwMDAwMzkxMjcgMDAwMDAgbiAKMDAwMDA0MTU2NCAwMDAwMCBuIAowMDAwMDQzOTk4IDAwMDAwIG4gCnRyYWlsZXIKPDwKL0lEIApbPDA4NTE4ZmQ3OGU4MzA2Zjk3NzMzNTM0ZmJhZDI4NzQyPjwwODUxOGZkNzhlODMwNmY5NzczMzUzNGZiYWQyODc0Mj5dCiUgUmVwb3J0TGFiIGdlbmVyYXRlZCBQREYgZG9jdW1lbnQgLS0gZGlnZXN0IChvcGVuc291cmNlKQoKL0luZm8gMjUgMCBSCi9Sb290IDI0IDAgUgovU2l6ZSAzMgo+PgpzdGFydHhyZWYKNDc0ODAKJSVFT0YK"
+          }
+        },
+        "mid_exec": {
+          "answer": "Access restricted. Board pack preparation is restricted to Senior Executive roles under the Information Classification & Access Policy [1]. If you require this for a specific business need, please raise a request through the Document Access workflow.",
+          "confidence": "n/a",
+          "confidencePercent": null,
+          "sources": [
+            {
+              "id": 1,
+              "documentName": "Information Classification & Access Policy v2.1",
+              "documentType": "Governance Policy",
+              "lastUpdated": "1 January 2026",
+              "snippet": "Board pack preparation and Board-Confidential materials are restricted to authorised roles only.",
+              "sourceType": "internal"
+            }
+          ],
+          "reasoning": {
+            "intent": "Document generation request",
+            "retrievedChunks": 4,
+            "topChunkScore": 0.92,
+            "validationChecks": [
+              "Access control: BLOCK — role not authorised for board pack generation",
+              "Audit log entry: access attempt recorded"
+            ]
+          },
+          "isAccessDenied": true
+        },
+        "operator": {
+          "answer": "Access restricted. Board pack preparation is restricted to Senior Executive roles under the Information Classification & Access Policy [1]. If you require this for a specific business need, please raise a request through the Document Access workflow.",
+          "confidence": "n/a",
+          "confidencePercent": null,
+          "sources": [
+            {
+              "id": 1,
+              "documentName": "Information Classification & Access Policy v2.1",
+              "documentType": "Governance Policy",
+              "lastUpdated": "1 January 2026",
+              "snippet": "Board pack preparation and Board-Confidential materials are restricted to authorised roles only.",
+              "sourceType": "internal"
+            }
+          ],
+          "reasoning": {
+            "intent": "Document generation request",
+            "retrievedChunks": 4,
+            "topChunkScore": 0.92,
+            "validationChecks": [
+              "Access control: BLOCK — role not authorised for board pack generation",
+              "Audit log entry: access attempt recorded"
+            ]
+          },
+          "isAccessDenied": true
+        }
+      }
+    },
+    {
       "id": "board_pack_rbac",
       "category": "Board Materials",
       "accessMode": "restricted",
@@ -995,7 +1444,8 @@ const DATA = {
               "documentType": "Board Material",
               "classification": "Board-Confidential",
               "lastUpdated": "20 April 2026",
-              "snippet": "Q1 2026 Board agenda included: portfolio review, IC decisions, ESG framework v2 ratification, auditor reappointment, ARC report, strategic roadmap update."
+              "snippet": "Q1 2026 Board agenda included: portfolio review, IC decisions, ESG framework v2 ratification, auditor reappointment, ARC report, strategic roadmap update.",
+              "sourceType": "internal"
             },
             {
               "id": 2,
@@ -1003,7 +1453,8 @@ const DATA = {
               "documentType": "Finance Report",
               "classification": "Board-Confidential",
               "lastUpdated": "15 April 2026",
-              "snippet": "Group revenue AED 480M, +8.4% YoY. Three project decisions: Hayyan Phase 2 (approved subject to pricing), Al Tay land acquisition (approved), Kalba Phase 1 (gate review deferred)."
+              "snippet": "Group revenue AED 480M, +8.4% YoY. Three project decisions: Hayyan Phase 2 (approved subject to pricing), Al Tay land acquisition (approved), Kalba Phase 1 (gate review deferred).",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -1027,7 +1478,8 @@ const DATA = {
               "documentName": "Information Classification & Access Policy v2.1",
               "documentType": "Governance Policy",
               "lastUpdated": "1 January 2026",
-              "snippet": "Board-Confidential materials materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner."
+              "snippet": "Board-Confidential materials materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -1052,7 +1504,8 @@ const DATA = {
               "documentName": "Information Classification & Access Policy v2.1",
               "documentType": "Governance Policy",
               "lastUpdated": "1 January 2026",
-              "snippet": "Board-Confidential materials materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner."
+              "snippet": "Board-Confidential materials materials are restricted to authorised roles only. Access requests for business need must be approved by the document owner.",
+              "sourceType": "internal"
             }
           ],
           "reasoning": {
@@ -1096,11 +1549,49 @@ const DATA = {
       "hr_notice_period",
       "hayyan_briefing",
       "zoning_abstention",
-      "board_pack_rbac"
+      "board_pack_rbac",
+      "prepare_board_pack"
     ],
     "arc": "open Q&A → role-tailored commercial → open policy → tailored market → tailored procurement → personalised HR → restricted briefing → trust (abstention) → governance (RBAC)"
   }
+}
+</script>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+// ============ INLINE ICONS (replacing lucide) ============
+const Icon = ({ path, size = 16, className = "", strokeWidth = 2, fill = "none" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+    fill={fill} stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
+    className={className}>
+    {path}
+  </svg>
+);
+const I = {
+  Send: (p) => <Icon {...p} path={<><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>} />,
+  ChevronDown: (p) => <Icon {...p} path={<polyline points="6 9 12 15 18 9"/>} />,
+  ChevronRight: (p) => <Icon {...p} path={<polyline points="9 18 15 12 9 6"/>} />,
+  FileText: (p) => <Icon {...p} path={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></>} />,
+  Lock: (p) => <Icon {...p} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} />,
+  Check: (p) => <Icon {...p} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />,
+  Alert: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />,
+  Minus: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></>} />,
+  Sparkles: (p) => <Icon {...p} path={<path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/>} />,
+  Briefcase: (p) => <Icon {...p} path={<><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></>} />,
+  Users: (p) => <Icon {...p} path={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />,
+  User: (p) => <Icon {...p} path={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />,
+  Shield: (p) => <Icon {...p} path={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></>} />,
+  Clock: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />,
+  Info: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>} />,
+  X: (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />,
+  Eye: (p) => <Icon {...p} path={<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>} />,
+  Message: (p) => <Icon {...p} path={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>} />
 };
+
+const ALEF_LOGO = "data:image/jpeg;base64,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";
+
+// ============ INLINE SCENARIO DATA ============
+const DATA = JSON.parse(document.getElementById('askalef-data').textContent);
 
 const PERSONA_LABELS = { senior_exec: "Senior Executive", mid_exec: "Mid-level Executive", operator: "Operator" };
 
@@ -1134,16 +1625,20 @@ const getResponseForPersona = (scenario, persona) => {
   return scenario.response;
 };
 
-const renderAnswerWithCitations = (text, onCite) => {
+const renderAnswerWithCitations = (text, sources, onCite) => {
   if (!text) return null;
   const parts = text.split(/(\[\d+\])/g);
   return parts.map((part, i) => {
     const m = part.match(/^\[(\d+)\]$/);
     if (m) {
       const n = parseInt(m[1]);
+      const src = sources && sources.find(s => s.id === n);
+      const isExternal = src && src.sourceType === 'external';
+      const cls = isExternal
+        ? "inline-flex items-center justify-center min-w-[20px] h-5 px-1 mx-0.5 text-[11px] font-medium text-[#0F766E] bg-[#CCFBF1] hover:bg-[#99F6E4] rounded transition-colors align-baseline"
+        : "inline-flex items-center justify-center min-w-[20px] h-5 px-1 mx-0.5 text-[11px] font-medium text-[#1E3A5F] bg-[#E8EEF5] hover:bg-[#D4DEEC] rounded transition-colors align-baseline";
       return (
-        <button key={i} onClick={() => onCite(n)}
-          className="inline-flex items-center justify-center min-w-[20px] h-5 px-1 mx-0.5 text-[11px] font-medium text-[#1E3A5F] bg-[#E8EEF5] hover:bg-[#D4DEEC] rounded transition-colors align-baseline">
+        <button key={i} onClick={() => onCite(n)} className={cls}>
           {n}
         </button>
       );
@@ -1183,17 +1678,24 @@ const ConfidenceChip = ({ confidence, percent }) => {
   );
 };
 
-const SourceCard = ({ source, highlighted, onOpen }) => (
+const SourceCard = ({ source, highlighted, onOpen }) => {
+  const isExternal = source.sourceType === 'external';
+  const chipBg = isExternal ? '#CCFBF1' : '#E8EEF5';
+  const chipColor = isExternal ? '#0F766E' : '#1E3A5F';
+  return (
   <div id={`source-${source.id}`}
     className={`bg-white border rounded-lg p-3 transition-all cursor-pointer hover:border-[#1E3A5F]/40 hover:shadow-sm ${highlighted ? 'border-[#1E3A5F] shadow-md ring-2 ring-[#1E3A5F]/20' : 'border-slate-200'}`}
     onClick={() => onOpen(source)}>
     <div className="flex items-start gap-2.5">
-      <div className="flex-shrink-0 w-7 h-7 rounded-md bg-[#E8EEF5] flex items-center justify-center mt-0.5">
-        <span className="text-[11px] font-semibold text-[#1E3A5F]">{source.id}</span>
+      <div className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center mt-0.5" style={{ background: chipBg }}>
+        <span className="text-[11px] font-semibold" style={{ color: chipColor }}>{source.id}</span>
       </div>
       <div className="flex-1 min-w-0">
         <div className="font-medium text-sm text-slate-900 leading-snug">{source.documentName}</div>
         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide" style={{ background: chipBg, color: chipColor }}>
+            {isExternal ? 'External' : 'Internal'}
+          </span>
           <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded">
             <I.FileText size={11} />{source.documentType}
           </span>
@@ -1216,7 +1718,8 @@ const SourceCard = ({ source, highlighted, onOpen }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 const ReasoningExpander = ({ reasoning }) => {
   const [open, setOpen] = useState(false);
@@ -1261,6 +1764,12 @@ const SourceModal = ({ source, onClose }) => {
             <div className="text-xs text-slate-500 mb-1">Source preview</div>
             <h3 className="text-base font-semibold text-slate-900">{source.documentName}</h3>
             <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide" style={{
+                background: source.sourceType === 'external' ? '#CCFBF1' : '#E8EEF5',
+                color: source.sourceType === 'external' ? '#0F766E' : '#1E3A5F'
+              }}>
+                {source.sourceType === 'external' ? 'External' : 'Internal'}
+              </span>
               <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                 <I.FileText size={12} />{source.documentType}
               </span>
@@ -1297,6 +1806,276 @@ const SourceModal = ({ source, onClose }) => {
       </div>
     </div>
   );
+};
+
+const DocumentGenerationCard = ({ data }) => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!data || !data.generationSteps) return;
+    const timers = [];
+    let elapsed = 0;
+    data.generationSteps.forEach((step, idx) => {
+      elapsed += step.duration;
+      const timer = setTimeout(() => {
+        if (idx < data.generationSteps.length - 1) {
+          setCurrentStep(idx + 1);
+        } else {
+          setDone(true);
+        }
+      }, elapsed);
+      timers.push(timer);
+    });
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const openPdf = () => {
+    try {
+      const base64 = data.document.pdfBase64;
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (e) {
+      alert('Unable to open PDF: ' + e.message);
+    }
+  };
+
+  const totalSeconds = data.generationSteps.reduce((a, s) => a + s.duration, 0) / 1000;
+
+  return (
+    <div className="mt-1">
+      <div className="flex items-center gap-2 mb-3 pb-2.5 border-b border-slate-100">
+        {done ? (
+          <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+            <I.Check size={12} className="text-emerald-700" />
+          </div>
+        ) : (
+          <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#FDF2F0' }}>
+            <I.Sparkles size={12} style={{ color: '#C9504F', animation: 'pulse-dot 1.5s ease-in-out infinite' }} />
+          </div>
+        )}
+        <span className="text-sm font-medium" style={{ color: '#1E3A5F' }}>
+          {done ? 'Board pack ready' : 'Generating board pack…'}
+        </span>
+        {done && (
+          <span className="text-[11px] text-slate-400 ml-auto">Completed in {totalSeconds.toFixed(0)}s</span>
+        )}
+      </div>
+
+      <div className="space-y-2.5">
+        {data.generationSteps.map((step, i) => {
+          const isDone = done || i < currentStep;
+          const isActive = !done && i === currentStep;
+          const isPending = !done && i > currentStep;
+          return (
+            <div key={i} className="flex items-start gap-2.5">
+              <div className="flex-shrink-0 mt-0.5">
+                {isDone && (
+                  <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <I.Check size={10} className="text-emerald-700" />
+                  </div>
+                )}
+                {isActive && (
+                  <div className="w-4 h-4 rounded-full border-2 docgen-spin" style={{ borderColor: '#C9504F', borderTopColor: 'transparent' }}></div>
+                )}
+                {isPending && (
+                  <div className="w-4 h-4 rounded-full border border-slate-300"></div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className={`text-[12.5px] leading-snug ${isActive ? 'font-medium' : ''}`} style={{ color: isActive ? '#1E3A5F' : isPending ? '#94A3B8' : '#475569' }}>
+                  {step.label}
+                </div>
+                {isActive && step.detail && (
+                  <div className="text-[11px] text-slate-500 mt-1 leading-snug italic">{step.detail}</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {done && (
+        <div className="mt-4 rounded-lg border p-3 flex items-center gap-3 docgen-reveal" style={{ borderColor: '#F4C7C5', background: 'linear-gradient(135deg, #FDF2F0 0%, #FFFFFF 100%)' }}>
+          <div className="w-12 h-14 rounded flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: '#C9504F' }}>
+            <I.FileText size={22} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-semibold truncate" style={{ color: '#1E3A5F' }}>{data.document.filename}</div>
+            <div className="text-[11.5px] text-slate-600 mt-0.5 truncate">{data.document.title}</div>
+            <div className="text-[10.5px] text-slate-400 mt-0.5">{data.document.pages} pages · {data.document.format} · Generated just now</div>
+          </div>
+          <button onClick={openPdf} className="px-3 py-2 text-xs font-semibold rounded-md text-white hover:opacity-90 transition-opacity flex-shrink-0 inline-flex items-center gap-1.5" style={{ background: '#1E3A5F' }}>
+            <I.Eye size={12} /> Open PDF
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============ CHART COMPONENTS ============
+const BarComparisonChart = ({ data }) => {
+  const maxBarWidth = 320;
+  const ratio = data.targetValue / data.actualValue;
+  const targetWidth = Math.round(maxBarWidth * ratio);
+  return (
+    <svg viewBox="0 0 540 130" style={{ width: '100%', height: 'auto', display: 'block' }} className="bg-white border border-slate-200 rounded-lg mt-2">
+      <rect x="395" y="10" width="135" height="22" rx="4" fill="#FDF2F0" stroke="#C9504F" strokeWidth="0.5"/>
+      <text x="462" y="25" fontSize="11" fill="#C9504F" fontWeight="600" textAnchor="middle">{data.deltaText}</text>
+      <text x="20" y="46" fontSize="11" fill="#64748B" fontWeight="500">{data.actualLabel}</text>
+      <rect x="20" y="50" width={maxBarWidth} height="22" rx="3" fill="#1E3A5F"/>
+      <text x="355" y="66" fontSize="13" fill="#1E3A5F" fontWeight="600">{data.actualValue} {data.actualSuffix}</text>
+      <text x="20" y="92" fontSize="11" fill="#64748B" fontWeight="500">{data.targetLabel}</text>
+      <rect x="20" y="96" width={targetWidth} height="22" rx="3" fill="#CBD5E1"/>
+      <text x="355" y="112" fontSize="13" fill="#64748B" fontWeight="500">{data.targetValue} {data.targetSuffix}</text>
+    </svg>
+  );
+};
+
+const SubmarketComparisonChart = ({ data }) => {
+  const maxVal = Math.max(...data.bars.map(b => b.value));
+  const minVal = Math.min(...data.bars.map(b => b.value));
+  const range = maxVal - minVal;
+  const baseY = 180;
+  const chartHeight = 124;
+  const barWidth = 80;
+  const positions = [60, 230, 400];
+  return (
+    <svg viewBox="0 0 540 220" style={{ width: '100%', height: 'auto', display: 'block' }} className="bg-white border border-slate-200 rounded-lg mt-2">
+      <line x1="20" y1="180" x2="520" y2="180" stroke="#E5E7EB" strokeWidth="1"/>
+      <text x="20" y="20" fontSize="10" fill="#94A3B8">{data.yLabel}</text>
+      {data.bars.map((bar, i) => {
+        const heightRatio = (bar.value - minVal * 0.85) / (maxVal - minVal * 0.85);
+        const h = Math.max(40, chartHeight * heightRatio);
+        const y = baseY - h;
+        const fill = bar.highlighted ? '#C9504F' : (i === 0 ? '#1E3A5F' : '#2E5077');
+        const textColor = bar.highlighted ? '#C9504F' : '#1E3A5F';
+        const labelColor = bar.highlighted ? '#C9504F' : '#475569';
+        const labelWeight = bar.highlighted ? '600' : '400';
+        return (
+          <g key={i}>
+            <text x={positions[i] + barWidth/2} y={y - 6} fontSize="13" fill={textColor} fontWeight="600" textAnchor="middle">{bar.value.toLocaleString()}</text>
+            <rect x={positions[i]} y={y} width={barWidth} height={h} rx="3" fill={fill}/>
+            <text x={positions[i] + barWidth/2} y="200" fontSize="11" fill={labelColor} textAnchor="middle" fontWeight={labelWeight}>{bar.label}</text>
+          </g>
+        );
+      })}
+      {data.annotation && (
+        <g>
+          <path d="M 145 100 L 395 100" stroke="#94A3B8" strokeWidth="1" strokeDasharray="3 3"/>
+          <rect x="220" y="90" width="100" height="20" rx="4" fill="#FDF2F0" stroke="#C9504F" strokeWidth="0.5"/>
+          <text x="270" y="104" fontSize="10" fill="#C9504F" fontWeight="600" textAnchor="middle">{data.annotation}</text>
+        </g>
+      )}
+    </svg>
+  );
+};
+
+const PaymentTimelineChart = ({ data }) => {
+  const xs = [70, 270, 470];
+  return (
+    <svg viewBox="0 0 540 130" style={{ width: '100%', height: 'auto', display: 'block' }} className="bg-white border border-slate-200 rounded-lg mt-2">
+      <line x1="70" y1="60" x2="470" y2="60" stroke="#CBD5E1" strokeWidth="2"/>
+      {data.milestones.map((m, i) => {
+        const cx = xs[i];
+        const r = m.emphasis ? 26 : 22;
+        const fill = m.emphasis ? '#C9504F' : '#1E3A5F';
+        const labelColor = m.emphasis ? '#C9504F' : '#1E3A5F';
+        return (
+          <g key={i}>
+            <circle cx={cx} cy="60" r={r} fill={fill}/>
+            <text x={cx} y="65" fontSize={m.emphasis ? "14" : "13"} fill="white" fontWeight="700" textAnchor="middle">{m.percent}%</text>
+            <text x={cx} y={m.emphasis ? 103 : 100} fontSize="11" fill={labelColor} fontWeight="600" textAnchor="middle">{m.label}</text>
+            <text x={cx} y={m.emphasis ? 117 : 115} fontSize="9" fill="#94A3B8" textAnchor="middle">{m.date}</text>
+          </g>
+        );
+      })}
+      {data.betweenLabels && data.betweenLabels[0] && (
+        <text x="170" y="46" fontSize="9" fill="#94A3B8" textAnchor="middle">{data.betweenLabels[0]}</text>
+      )}
+      {data.betweenLabels && data.betweenLabels[1] && (
+        <text x="370" y="46" fontSize="9" fill="#94A3B8" textAnchor="middle">{data.betweenLabels[1]}</text>
+      )}
+    </svg>
+  );
+};
+
+const TierLadderChart = ({ data }) => {
+  const xStart = 100;
+  const maxWidth = 340;
+  const yourTierY = 14 + data.highlightedIndex * 54;
+  return (
+    <svg viewBox="0 0 540 185" style={{ width: '100%', height: 'auto', display: 'block' }} className="bg-white border border-slate-200 rounded-lg mt-2">
+      <text x="20" y={yourTierY + 20} fontSize="10" fill="#C9504F" fontWeight="600">YOUR TIER</text>
+      {data.tiers.map((tier, i) => {
+        const y = 14 + i * 54;
+        const width = Math.round(maxWidth * (tier.value / data.xAxisMax));
+        const isHi = i === data.highlightedIndex;
+        const fill = isHi ? '#C9504F' : '#CBD5E1';
+        const labelColor = isHi ? 'white' : '#475569';
+        const valueColor = isHi ? '#C9504F' : '#475569';
+        return (
+          <g key={i}>
+            <rect x={xStart} y={y} width={width} height="32" rx="3" fill={fill}/>
+            <text x={xStart + 15} y={y + 20} fontSize="13" fill={labelColor} fontWeight={isHi ? '600' : '500'}>{tier.label}</text>
+            <text x={xStart + width + 10} y={y + 20} fontSize="13" fill={valueColor} fontWeight={isHi ? '700' : '600'}>{tier.value} {tier.unit}</text>
+          </g>
+        );
+      })}
+      <line x1={xStart} y1="171" x2={xStart + maxWidth} y2="171" stroke="#E5E7EB"/>
+      <text x={xStart} y="183" fontSize="9" fill="#94A3B8">0</text>
+      <text x={xStart + maxWidth/3} y="183" fontSize="9" fill="#94A3B8" textAnchor="middle">30</text>
+      <text x={xStart + 2*maxWidth/3} y="183" fontSize="9" fill="#94A3B8" textAnchor="middle">60</text>
+      <text x={xStart + maxWidth} y="183" fontSize="9" fill="#94A3B8" textAnchor="end">{data.xAxisMax} days</text>
+    </svg>
+  );
+};
+
+const KPIGridChart = ({ data }) => {
+  const toneStyles = {
+    coral: { color: '#C9504F', bg: '#FDF2F0' },
+    green: { color: '#15803D', bg: '#DCFCE7' },
+    navy:  { color: '#1E3A5F', bg: '#E8EEF5' }
+  };
+  return (
+    <div className="grid grid-cols-2 gap-2 mt-2">
+      {data.kpis.map((kpi, i) => {
+        const tone = toneStyles[kpi.deltaTone] || toneStyles.navy;
+        return (
+          <div key={i} className="bg-white border border-slate-200 rounded-lg p-3">
+            <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-1 font-medium">{kpi.label}</div>
+            <div className="flex items-baseline gap-1.5">
+              <div className="text-[22px] font-semibold text-[#1E3A5F]">{kpi.value}<span className="text-[13px] text-slate-500">{kpi.unit}</span></div>
+              {kpi.deltaText && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ color: tone.color, background: tone.bg }}>{kpi.deltaText}</span>
+              )}
+            </div>
+            {kpi.showProgress && (
+              <div className="mt-1.5 bg-slate-100 h-1 rounded-full overflow-hidden">
+                <div className="h-full" style={{ width: `${kpi.progressValue}%`, background: '#1E3A5F' }}></div>
+              </div>
+            )}
+            {kpi.subtext && <div className="text-[10px] text-slate-400 mt-1">{kpi.subtext}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const ChartRenderer = ({ chart }) => {
+  if (!chart) return null;
+  if (chart.type === 'barComparison') return <BarComparisonChart data={chart} />;
+  if (chart.type === 'submarketComparison') return <SubmarketComparisonChart data={chart} />;
+  if (chart.type === 'paymentTimeline') return <PaymentTimelineChart data={chart} />;
+  if (chart.type === 'tierLadder') return <TierLadderChart data={chart} />;
+  if (chart.type === 'kpiGrid') return <KPIGridChart data={chart} />;
+  return null;
 };
 
 function App() {
@@ -1371,9 +2150,16 @@ function App() {
       }
       const assistantMsgId = Date.now() + 1;
       setIsThinking(false);
+      setActiveSources(response.sources || []);
+
+      // Document-generation responses skip text streaming — the card has its own progressive animation
+      if (response.responseType === 'documentGeneration') {
+        setMessages(prev => [...prev, { type: 'assistant', id: assistantMsgId, response, persona: currentPersona, category }]);
+        return;
+      }
+
       setStreamingMessageId(assistantMsgId);
       setStreamingText('');
-      setActiveSources(response.sources || []);
 
       const fullText = response.answer;
       let charIdx = 0;
@@ -1488,14 +2274,21 @@ function App() {
                       {resp.isAccessDenied ? <I.Lock size={16} className="text-red-600" /> : <I.Sparkles size={16} className="text-white" />}
                     </div>
                     <div className="flex-1 max-w-[88%] bg-white border border-slate-200 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
-                      <div className="text-sm text-slate-800 leading-relaxed">
-                        {renderAnswerWithCitations(resp.answer, (n) => {
-                          if (resp.sources.find(s => s.id === n)) {
-                            setActiveSources(resp.sources);
-                            handleCitationClick(n);
-                          }
-                        })}
-                      </div>
+                      {resp.responseType === 'documentGeneration' ? (
+                        <DocumentGenerationCard data={resp} />
+                      ) : (
+                        <>
+                          <div className="text-sm text-slate-800 leading-relaxed">
+                            {renderAnswerWithCitations(resp.answer, resp.sources, (n) => {
+                              if (resp.sources.find(s => s.id === n)) {
+                                setActiveSources(resp.sources);
+                                handleCitationClick(n);
+                              }
+                            })}
+                          </div>
+                          <ChartRenderer chart={resp.chart} />
+                        </>
+                      )}
                       <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
                         <ConfidenceChip confidence={resp.confidence} percent={resp.confidencePercent} />
                         {msg.category && (
